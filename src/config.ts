@@ -6,8 +6,7 @@ export const siteConfig = {
   product: 'Soul Review',
   tagline: 'A code reviewer with a soul — and a memory.',
   repoUrl: 'https://github.com/yizyace/github-copilot-hackathon-26',
-  // TODO: set to the Azure Static Web Apps URL once the resource is connected.
-  siteUrl: '',
+  siteUrl: 'https://green-sea-012dd340f.7.azurestaticapps.net',
 } as const
 
 export interface TeamMember {

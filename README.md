@@ -4,7 +4,7 @@
 
 > _A code reviewer with a soul — and a memory._
 
-🌐 **Live site:** deploying to **Azure Static Web Apps** — URL added once the resource is connected.
+🌐 **Live site:** **https://green-sea-012dd340f.7.azurestaticapps.net/** — live on Azure Static Web Apps ✅
 
 Status: **🚧 Hackathon WIP** — the site/pitch deck is live; the review engine is in progress.
 
