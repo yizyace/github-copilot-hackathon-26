@@ -41006,51 +41006,6 @@ const COLD_START_TEMPLATE = `# PatternBuddy — Pattern Memory
 
 ## Other
 `;
-const SECTION_KEYWORDS = {
-    'factory-patterns': ['factory', 'create', 'builder', 'instantiat'],
-    'singleton-patterns': ['singleton', 'instance', 'static'],
-    'coupling-issues': ['import', 'require', 'depend', 'inject', 'coupled'],
-    'solid-violations': ['solid', 'single', 'responsibility', 'open', 'closed', 'liskov', 'interface', 'dependency'],
-    'dry-violations': ['duplicate', 'repeat', 'copy', 'dry'],
-    'observer-patterns': ['event', 'listener', 'subscribe', 'observer', 'emit'],
-    'best-practices': ['best', 'practice', 'pattern', 'principle'],
-    'other': []
-};
-function extractSections(content, relevantSections) {
-    const lines = content.split('\n');
-    const result = [];
-    let current = null;
-    let capture = false;
-    for (const line of lines) {
-        const headingMatch = line.match(/^## (.+)$/);
-        if (headingMatch) {
-            const sectionSlug = headingMatch[1].toLowerCase().replace(/\s+/g, '-');
-            current = sectionSlug;
-            capture = relevantSections.includes(sectionSlug);
-            if (capture)
-                result.push(line);
-        }
-        else if (capture && current) {
-            result.push(line);
-        }
-    }
-    return result.join('\n').trim();
-}
-function getRelevantSections(filesChanged) {
-    const relevant = new Set();
-    const allFiles = filesChanged.join(' ').toLowerCase();
-    for (const [section, keywords] of Object.entries(SECTION_KEYWORDS)) {
-        if (section === 'other')
-            continue;
-        if (keywords.some(kw => allFiles.includes(kw))) {
-            relevant.add(section);
-        }
-    }
-    // Always include coupling-issues and solid-violations — universally relevant
-    relevant.add('coupling-issues');
-    relevant.add('solid-violations');
-    return Array.from(relevant);
-}
 async function loadHistory(context) {
     if (!fs.existsSync(MD_PATH)) {
         core.info('PatternBuddy: No .pattern-pointers.md found. Creating from template.');
@@ -41060,10 +41015,17 @@ async function loadHistory(context) {
             input: { ...context.input, history: '' }
         };
     }
+    // The memory file is small, so load it whole. The previous keyword-on-filepath
+    // selection almost always collapsed to just coupling + SOLID, starving the
+    // model of relevant prior patterns. Only pass history once there's a real
+    // entry (a "- " bullet); a bare template stays empty so the prompt's
+    // "no history yet" path still kicks in on fresh repos.
     const content = fs.readFileSync(MD_PATH, 'utf8');
-    const relevantSections = getRelevantSections(context.input.prMetadata.filesChanged);
-    const history = extractSections(content, relevantSections);
-    core.info(`PatternBuddy: Loaded history sections: ${relevantSections.join(', ')}`);
+    const hasEntries = /^\s*-\s+/m.test(content);
+    const history = hasEntries ? content.trim() : '';
+    core.info(hasEntries
+        ? 'PatternBuddy: Loaded full pattern history.'
+        : 'PatternBuddy: Pattern memory has no entries yet.');
     return {
         ...context,
         input: { ...context.input, history }
@@ -41190,6 +41152,8 @@ const core = __importStar(__nccwpck_require__(7484));
 const github = __importStar(__nccwpck_require__(3228));
 const fs = __importStar(__nccwpck_require__(9896));
 const path = __importStar(__nccwpck_require__(6928));
+const skillLoader_1 = __nccwpck_require__(8513);
+const SKILLS_DIR = path.join(process.cwd(), 'pattern-buddy', 'skills');
 const DEFAULT_CONFIG = {
     tone: 'mentor',
     strictness: 'balanced'
@@ -41247,11 +41211,14 @@ async function buildInput() {
         filesChanged: files.map(f => f.filename)
     };
     const config = loadConfig();
+    const skills = (0, skillLoader_1.selectEnabled)((0, skillLoader_1.loadSkills)(SKILLS_DIR));
+    core.info(`PatternBuddy: Loaded ${skills.length} enabled skill playbook(s).`);
     const input = {
         prMetadata,
         diffContent: diffData,
         config,
-        history: '' // Populated by historyLoader
+        history: '', // Populated by historyLoader
+        skills
     };
     return {
         input,
@@ -41535,6 +41502,10 @@ Your tone is measured, thoughtful, and contemplative.`
         balanced: `Flag meaningful patterns only. Skip trivial or purely stylistic issues.`,
         relaxed: `Flag high-impact observations only. Only surface findings that meaningfully affect architecture or maintainability.`
     };
+    const skills = context.input.skills;
+    const skillsBlock = skills.length > 0
+        ? skills.map(s => `### ${s.name}\n${s.body.trim()}`).join('\n\n')
+        : 'No custom playbooks configured — apply your general design-pattern expertise.';
     return `You are PatternBuddy — a senior engineer who has read every line of code this team has ever written.
 Your job is to analyze a pull request diff and identify software design patterns, anti-patterns, and architectural observations.
 You have access to the codebase's pattern history to identify recurring issues and connect dots across PRs.
@@ -41544,6 +41515,9 @@ ${toneInstructions[tone]}
 
 STRICTNESS:
 ${strictnessInstructions[strictness]}
+
+PATTERN PLAYBOOKS (team-maintained detection guides — apply each one specifically where it's relevant to the diff):
+${skillsBlock}
 
 PATTERN HISTORY (from .pattern-pointers.md):
 ${context.input.history || 'No history yet. This is the first analysis for this repository.'}
@@ -41576,6 +41550,154 @@ Return a JSON array where each element matches this exact structure:
 
 If no meaningful patterns are found, return an empty array: []
 Return ONLY the JSON array. Nothing else.`;
+}
+
+
+/***/ }),
+
+/***/ 8513:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.parseSkill = parseSkill;
+exports.loadSkills = loadSkills;
+exports.selectEnabled = selectEnabled;
+/**
+ * Skill playbook loading, parsing & selection.
+ *
+ * Skills are team-editable markdown playbooks: a small `---`-delimited YAML
+ * frontmatter block (`slug, name, category, severity_ceiling, enabled`) plus a
+ * markdown body. PatternBuddy loads the enabled ones and injects their bodies
+ * into the Claude prompt.
+ *
+ * We parse the small, flat frontmatter ourselves to keep the package free of a
+ * YAML dependency — the frontmatter is intentionally simple `key: value` lines.
+ *
+ * This module is deliberately decoupled: it may use `fs`/`path`, but it does NOT
+ * depend on `./types` or `@actions/*`, so it can be unit-tested and reused in
+ * isolation.
+ */
+const fs = __importStar(__nccwpck_require__(9896));
+const path = __importStar(__nccwpck_require__(6928));
+/**
+ * Parse a single skill markdown document into a {@link Skill}.
+ *
+ * Splits the leading `---` frontmatter block from the markdown body, then parses
+ * each `key: value` line (optional surrounding quotes are stripped). `enabled` is
+ * coerced to a boolean (`=== 'true'`), and `severity_ceiling` is mapped to
+ * `severityCeiling`. Sensible defaults are applied when keys are absent:
+ * `category: 'other'`, `severityCeiling: 'major'`, `enabled: true`.
+ *
+ * Requires at least a `name` (falling back to the slug). Returns `null` when the
+ * frontmatter is malformed (no `---` fences) or no name/slug can be determined.
+ *
+ * @param raw          The full file contents.
+ * @param fallbackSlug A slug to use when the frontmatter omits one (typically the
+ *                     filename without its `.md` extension).
+ */
+function parseSkill(raw, fallbackSlug) {
+    const normalized = raw.replace(/^﻿/, ''); // strip BOM if present
+    const match = /^---\s*\n([\s\S]*?)\n---\s*\n?([\s\S]*)$/.exec(normalized);
+    if (!match) {
+        // Malformed: no `---` frontmatter fences.
+        return null;
+    }
+    const fm = match[1] ?? '';
+    const body = (match[2] ?? '').trim();
+    const fields = {};
+    for (const line of fm.split('\n')) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith('#'))
+            continue;
+        const idx = trimmed.indexOf(':');
+        if (idx === -1)
+            continue;
+        const key = trimmed.slice(0, idx).trim();
+        let value = trimmed.slice(idx + 1).trim();
+        // Strip optional surrounding quotes.
+        value = value.replace(/^["']/, '').replace(/["']$/, '');
+        fields[key] = value;
+    }
+    const slug = fields.slug ?? fallbackSlug;
+    const name = fields.name ?? slug;
+    // Require at least a name (or a slug we can fall back to as the name).
+    if (!name)
+        return null;
+    return {
+        slug: slug ?? name,
+        name,
+        category: fields.category ?? 'other',
+        severityCeiling: fields.severity_ceiling ?? 'major',
+        enabled: 'enabled' in fields ? fields.enabled === 'true' : true,
+        body,
+    };
+}
+/**
+ * Load every `*.md` skill playbook from `dir`.
+ *
+ * Returns `[]` when `dir` does not exist. Each file is parsed via
+ * {@link parseSkill} (with the slug defaulting to the filename without `.md`);
+ * files whose frontmatter is malformed are skipped with a `console.warn`. Results
+ * are sorted by filename for deterministic prompts.
+ */
+function loadSkills(dir) {
+    if (!fs.existsSync(dir))
+        return [];
+    const files = fs
+        .readdirSync(dir)
+        .filter(f => f.endsWith('.md'))
+        .sort();
+    const skills = [];
+    for (const file of files) {
+        const raw = fs.readFileSync(path.join(dir, file), 'utf8');
+        const fallbackSlug = file.replace(/\.md$/, '');
+        const skill = parseSkill(raw, fallbackSlug);
+        if (skill === null) {
+            console.warn(`skillLoader: skipping malformed skill file "${file}"`);
+            continue;
+        }
+        skills.push(skill);
+    }
+    return skills;
+}
+/** Select only the enabled skills. */
+function selectEnabled(skills) {
+    return skills.filter(s => s.enabled);
 }
 
 
