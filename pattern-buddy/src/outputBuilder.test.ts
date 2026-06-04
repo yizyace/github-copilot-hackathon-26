@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildOutput } from './outputBuilder';
 import { AnalysisContext, BuddyConfig, Finding } from './types';
+import { Suppression } from './suppressions';
 
 function finding(overrides: Partial<Finding> = {}): Finding {
   return {
@@ -18,7 +19,7 @@ function finding(overrides: Partial<Finding> = {}): Finding {
   };
 }
 
-function context(findings: Finding[], config: BuddyConfig): AnalysisContext {
+function context(findings: Finding[], config: BuddyConfig, suppressions: Suppression[] = []): AnalysisContext {
   return {
     input: {
       prMetadata: {
@@ -28,7 +29,8 @@ function context(findings: Finding[], config: BuddyConfig): AnalysisContext {
       diffContent: '',
       config,
       history: '',
-      skills: []
+      skills: [],
+      suppressions
     },
     analysis: { findings },
     output:   { comments: [], mdUpdates: [], summary: '' }
@@ -69,6 +71,20 @@ describe('buildOutput summary', () => {
   it('varies the verdict by tone', async () => {
     const { output } = await buildOutput(context([finding()], { tone: 'roast', strictness: 'strict' }));
     expect(output.summary).toContain('Pull up a chair');
+  });
+});
+
+describe('buildOutput suppression backstop', () => {
+  it('drops findings that match a suppression', async () => {
+    const supp: Suppression[] = [{ patternName: 'Tight Coupling', filePath: 'src/foo.ts' }];
+    const { output } = await buildOutput(context([
+      finding({ patternName: 'Tight Coupling', filePath: 'src/foo.ts' }),
+      finding({ patternName: 'God Object', filePath: 'src/bar.ts', category: 'solid-violations' })
+    ], mentor, supp));
+    expect(output.comments).toHaveLength(1);
+    expect(output.comments[0].filePath).toBe('src/bar.ts');
+    expect(output.mdUpdates).toHaveLength(1);
+    expect(output.summary).toContain('**1**');
   });
 });
 

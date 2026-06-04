@@ -77,10 +77,11 @@ export async function buildInput(): Promise<AnalysisContext> {
 
   const input: InputPayload = {
     prMetadata,
-    diffContent: diffData,
+    diffContent:  diffData,
     config,
-    history:     '',  // Populated by historyLoader
-    skills
+    history:      '',  // Populated by historyLoader
+    skills,
+    suppressions: []   // Populated by historyLoader
   };
 
   return {

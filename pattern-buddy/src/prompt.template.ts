@@ -26,6 +26,13 @@ Your tone is measured, thoughtful, and contemplative.`
     ? skills.map(s => `### ${s.name}\n${s.body.trim()}`).join('\n\n')
     : 'No custom playbooks configured — apply your general design-pattern expertise.';
 
+  const suppressions     = context.input.suppressions;
+  const suppressedSection = suppressions.length > 0
+    ? `\nSUPPRESSED (the team has dismissed these — do NOT flag them again):\n${
+        suppressions.map(s => `- ${s.patternName} in ${s.filePath}${s.lineStart != null ? ` (line ${s.lineStart})` : ''}`).join('\n')
+      }\n`
+    : '';
+
   return `You are PatternBuddy — a senior engineer who has read every line of code this team has ever written.
 Your job is to analyze a pull request diff and identify software design patterns, anti-patterns, and architectural observations.
 You have access to the codebase's pattern history to identify recurring issues and connect dots across PRs.
@@ -41,7 +48,7 @@ ${skillsBlock}
 
 PATTERN HISTORY (from .pattern-pointers.md):
 ${context.input.history || 'No history yet. This is the first analysis for this repository.'}
-
+${suppressedSection}
 PR DIFF:
 ${context.input.diffContent}
 

@@ -1,4 +1,5 @@
 import { Skill } from './skillLoader';
+import { Suppression } from './suppressions';
 
 export type PatternCategory =
   | 'factory-patterns'
@@ -43,8 +44,9 @@ export interface InputPayload {
   readonly prMetadata:  PRMetadata;
   readonly diffContent: string;
   readonly config:      BuddyConfig;
-  readonly history:     string;
-  readonly skills:      Skill[];
+  readonly history:      string;
+  readonly skills:       Skill[];
+  readonly suppressions: Suppression[];
 }
 
 export interface AnalysisPayload {

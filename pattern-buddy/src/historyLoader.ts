@@ -2,6 +2,7 @@ import * as core from '@actions/core';
 import * as fs   from 'fs';
 import * as path from 'path';
 import { AnalysisContext } from './types';
+import { parseSuppressions } from './suppressions';
 
 const MD_PATH = path.join(process.cwd(), '.pattern-pointers.md');
 
@@ -33,7 +34,7 @@ export async function loadHistory(context: AnalysisContext): Promise<AnalysisCon
     fs.writeFileSync(MD_PATH, COLD_START_TEMPLATE, 'utf8');
     return {
       ...context,
-      input: { ...context.input, history: '' }
+      input: { ...context.input, history: '', suppressions: [] }
     };
   }
 
@@ -45,15 +46,15 @@ export async function loadHistory(context: AnalysisContext): Promise<AnalysisCon
   const content = fs.readFileSync(MD_PATH, 'utf8');
   // A real memory entry is a "- ..." bullet that cites its PR (#N). Requiring the
   // PR reference avoids treating a stray prose list or hand-added note as history.
-  const hasEntries = /^\s*-\s+.*#\d+/m.test(content);
-  const history    = hasEntries ? content.trim() : '';
+  const hasEntries   = /^\s*-\s+.*#\d+/m.test(content);
+  const history      = hasEntries ? content.trim() : '';
+  const suppressions = parseSuppressions(content);
 
-  core.info(hasEntries
-    ? 'PatternBuddy: Loaded full pattern history.'
-    : 'PatternBuddy: Pattern memory has no entries yet.');
+  core.info(`${hasEntries ? 'PatternBuddy: Loaded full pattern history.' : 'PatternBuddy: Pattern memory has no entries yet.'}`
+    + ` ${suppressions.length} suppression(s).`);
 
   return {
     ...context,
-    input: { ...context.input, history }
+    input: { ...context.input, history, suppressions }
   };
 }
