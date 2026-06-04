@@ -15,11 +15,13 @@
   --sr-panel-2: #1b1e29;
   --sr-line: #262a33;
   --sr-line-soft: rgba(236, 230, 218, 0.09);
+  /* Stronger boundary for interactive controls (≥3:1 vs the dark fill). */
+  --sr-line-strong: #6b7180;
 
   /* Text — warm parchment, not cold white */
   --sr-text: #ece6da;
   --sr-text-muted: #9a958a;
-  --sr-text-faint: #6f6c66;
+  --sr-text-faint: #8f8a80;
 
   /* Accents — ember = soul/identity, spectral = memory/citations */
   --sr-ember: #f2b250;
@@ -66,6 +68,26 @@
   outline: 2px solid var(--sr-spectral);
   outline-offset: 2px;
   border-radius: 4px;
+}
+
+/* Skip link — first focusable element, slides in on focus. */
+.theme-soul .sr-skip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 100;
+  transform: translateY(-130%);
+  margin: 0.5rem;
+  padding: 0.6em 1em;
+  background: var(--sr-ember);
+  color: #20160a;
+  font-weight: 600;
+  border-radius: var(--sr-radius-sm);
+  text-decoration: none;
+  transition: transform 0.15s ease;
+}
+.theme-soul .sr-skip:focus {
+  transform: none;
 }
 
 .theme-soul code,

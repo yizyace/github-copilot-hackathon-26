@@ -1,4 +1,5 @@
-import { Route, Routes } from 'react-router-dom'
+import { useEffect, useRef } from 'react'
+import { Route, Routes, useLocation } from 'react-router-dom'
 import Home from './pages/Home'
 import Editor from './pages/Editor'
 import About from './pages/About'
@@ -6,9 +7,26 @@ import Docs from './pages/Docs'
 import NotFound from './pages/NotFound'
 import { ChromeLayout } from './components/ChromeLayout'
 
+// On client-side navigation, move focus to the new page's main region so
+// screen-reader and keyboard users aren't left on an unmounted link.
+function RouteFocus() {
+  const { pathname } = useLocation()
+  const firstRender = useRef(true)
+  useEffect(() => {
+    if (firstRender.current) {
+      firstRender.current = false
+      return
+    }
+    document.getElementById('main-content')?.focus()
+  }, [pathname])
+  return null
+}
+
 function App() {
   return (
-    <Routes>
+    <>
+      <RouteFocus />
+      <Routes>
       {/* Full-bleed surfaces — their own layout, no shared chrome. */}
       <Route path="/" element={<Home />} />
       <Route path="/editor" element={<Editor />} />
@@ -19,7 +37,8 @@ function App() {
         <Route path="/docs" element={<Docs />} />
         <Route path="*" element={<NotFound />} />
       </Route>
-    </Routes>
+      </Routes>
+    </>
   )
 }
 

@@ -156,7 +156,7 @@
 .sr-input {
   width: 100%;
   background: var(--sr-ink-2);
-  border: 1px solid var(--sr-line);
+  border: 1px solid var(--sr-line-strong);
   border-radius: var(--sr-radius-sm);
   padding: 0.55rem 0.7rem;
   color: var(--sr-text);
@@ -378,25 +378,21 @@
 }
 
 /* ---- Demo review modal ---- */
-.sr-modal {
-  position: fixed;
-  inset: 0;
-  z-index: 50;
-  display: grid;
-  place-items: center;
-  padding: 1.5rem;
-  background: rgba(5, 6, 9, 0.72);
-  backdrop-filter: blur(3px);
-}
-.sr-modal__panel {
-  width: min(820px, 100%);
+.sr-modal[open] {
+  width: min(820px, 92vw);
   max-height: 88vh;
+  margin: auto;
   overflow-y: auto;
   background: var(--sr-ink-2);
+  color: var(--sr-text);
   border: 1px solid var(--sr-line);
   border-radius: var(--sr-radius-lg);
   box-shadow: var(--sr-shadow);
   padding: 1.5rem;
+}
+.sr-modal::backdrop {
+  background: rgba(5, 6, 9, 0.72);
+  backdrop-filter: blur(3px);
 }
 .sr-modal__head {
   display: flex;
@@ -409,6 +405,10 @@
   margin: 0;
 }
 .sr-modal__close {
+  display: grid;
+  place-items: center;
+  min-width: 1.5rem;
+  min-height: 1.5rem;
   background: none;
   border: none;
   color: var(--sr-text-muted);

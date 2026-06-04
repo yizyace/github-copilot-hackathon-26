@@ -79,8 +79,11 @@ export function Landing() {
 
   return (
     <div className="theme-soul sr-landing">
+      <a className="sr-skip" href="#main-content">
+        Skip to content
+      </a>
       <Header />
-      <div className="sr-deck">
+      <main id="main-content" tabIndex={-1} className="sr-deck">
         {sections.map((s, i) => (
           <section
             key={s.id}
@@ -94,7 +97,7 @@ export function Landing() {
             {s.node}
           </section>
         ))}
-      </div>
+      </main>
       <SlideDots sections={sections} active={active} onJump={jumpTo} />
     </div>
   )

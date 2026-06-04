@@ -14,7 +14,7 @@ export function ChromeLayout() {
         <NavLink to="/docs">Docs</NavLink>
       </nav>
 
-      <main className="content">
+      <main id="main-content" tabIndex={-1} className="content">
         <Outlet />
       </main>
     </div>

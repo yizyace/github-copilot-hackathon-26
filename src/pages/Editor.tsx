@@ -46,6 +46,9 @@ function Editor() {
 
   return (
     <div className="theme-soul sr-editor">
+      <a className="sr-skip" href="#main-content">
+        Skip to editor
+      </a>
       <header className="sr-editor__bar">
         <div className="sr-editor__brandwrap">
           <Link to="/" className="sr-editor__brand">
@@ -54,7 +57,7 @@ function Editor() {
           <span className="sr-editor__title">Soul editor</span>
         </div>
         <div className="sr-editor__actions">
-          <span className={`sr-editor__status ${errors ? 'is-bad' : ''}`.trim()}>
+          <span role="status" className={`sr-editor__status ${errors ? 'is-bad' : ''}`.trim()}>
             {errors === 0 && warnings === 0 ? '✓ valid' : `${errors} err · ${warnings} warn`}
           </span>
           <button type="button" className="sr-btn sr-btn--ghost" onClick={loadSample}>
@@ -87,7 +90,7 @@ function Editor() {
           ))}
         </nav>
 
-        <main className="sr-editor__main">
+        <main id="main-content" tabIndex={-1} className="sr-editor__main">
           {target === 'manifest' && (
             <ManifestForm value={stack.manifest} onChange={(m) => setStack((s) => ({ ...s, manifest: m }))} />
           )}
