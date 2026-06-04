@@ -1,3 +1,5 @@
+import { Skill } from './skillLoader';
+
 export type PatternCategory =
   | 'factory-patterns'
   | 'singleton-patterns'
@@ -42,6 +44,7 @@ export interface InputPayload {
   readonly diffContent: string;
   readonly config:      BuddyConfig;
   readonly history:     string;
+  readonly skills:      Skill[];
 }
 
 export interface AnalysisPayload {
