@@ -1,0 +1,231 @@
+/* Pattern Buddy pitch deck — a timed companion to the landing, reusing the
+   "Ink, Ember & Spectral" theme + the landing's scroll-snap deck. */
+
+/* ---- Agenda slide (the "Your 4 Minutes" timing plan) ---- */
+.sr-agenda__title {
+  font-family: var(--sr-font-display);
+  font-weight: 600;
+  font-size: clamp(2.2rem, 6vw, 4.2rem);
+  line-height: 1.04;
+  letter-spacing: -0.02em;
+  margin: 0.75rem 0 2rem;
+}
+.sr-agenda__title em {
+  font-style: italic;
+  color: var(--sr-ember);
+}
+.sr-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.sr-timeline__row {
+  display: grid;
+  grid-template-columns: 7.5rem 1fr auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.85rem 1.1rem;
+  border: 1px solid var(--sr-line);
+  border-left: 3px solid var(--sr-line);
+  border-radius: var(--sr-radius);
+  background: var(--sr-panel);
+}
+.sr-timeline__row.is-focus {
+  border-color: var(--sr-ember);
+  border-left-color: var(--sr-ember);
+  background: var(--sr-ember-soft);
+}
+.sr-timeline__time {
+  font-family: var(--sr-font-mono);
+  font-size: 0.92rem;
+  color: var(--sr-ember);
+}
+.sr-timeline__what {
+  color: var(--sr-text);
+  font-size: 1.02rem;
+}
+.sr-agenda__mantra {
+  margin: 1.75rem 0 0;
+  font-family: var(--sr-font-display);
+  font-style: italic;
+  font-size: 1.1rem;
+  color: var(--sr-text-muted);
+}
+
+/* ---- Per-slide time badge ---- */
+.sr-slidetime {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0 0 1.25rem;
+}
+.sr-slidetime__flag {
+  font-family: var(--sr-font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--sr-ember);
+}
+
+/* ---- Shared pitch lede ---- */
+.sr-pitch__lede {
+  font-size: clamp(1.05rem, 1.7vw, 1.3rem);
+  line-height: 1.6;
+  color: var(--sr-text-muted);
+  max-width: 56ch;
+  margin: 0;
+}
+.sr-pitch__lede strong {
+  color: var(--sr-text);
+}
+.sr-pitch__lede em {
+  font-style: italic;
+  color: var(--sr-ember);
+}
+.sr-pitch__lede--center {
+  text-align: center;
+  margin-inline: auto;
+}
+
+/* ---- Live demo cue slide ---- */
+.sr-cue__title {
+  font-family: var(--sr-font-display);
+  font-weight: 600;
+  font-size: clamp(2rem, 5vw, 3.4rem);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  margin: 0 0 1.5rem;
+  color: var(--sr-ember);
+}
+.sr-cue__steps {
+  margin: 0 0 1.75rem;
+  padding-left: 1.3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  max-width: 60ch;
+}
+.sr-cue__steps li {
+  font-size: clamp(1rem, 1.5vw, 1.2rem);
+  line-height: 1.55;
+  color: var(--sr-text);
+}
+.sr-cue__steps code {
+  color: var(--sr-spectral);
+  background: var(--sr-spectral-soft);
+}
+.sr-cue__cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+}
+
+/* ---- Live presentation timer ---- */
+.sr-timer {
+  position: fixed;
+  left: clamp(0.75rem, 2vw, 1.5rem);
+  bottom: clamp(0.75rem, 2vw, 1.5rem);
+  z-index: 6;
+  width: min(20rem, calc(100vw - 2rem));
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--pace, var(--sr-spectral));
+  border-radius: var(--sr-radius);
+  background: rgba(21, 23, 31, 0.92);
+  backdrop-filter: blur(8px);
+  box-shadow: var(--sr-shadow-card);
+}
+.sr-timer--idle {
+  --pace: var(--sr-line-strong);
+}
+.sr-timer--ok {
+  --pace: var(--sr-ok);
+}
+.sr-timer--warn {
+  --pace: var(--sr-ember);
+}
+.sr-timer--over {
+  --pace: var(--sr-danger);
+}
+.sr-timer__top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.sr-timer__clock {
+  font-family: var(--sr-font-mono);
+}
+.sr-timer__elapsed {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--pace, var(--sr-text));
+}
+.sr-timer__total {
+  font-size: 0.95rem;
+  color: var(--sr-text-faint);
+}
+.sr-timer__state {
+  font-family: var(--sr-font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--pace, var(--sr-text-muted));
+}
+.sr-timer__seg {
+  font-size: 0.82rem;
+  color: var(--sr-text-muted);
+}
+.sr-timer__bar {
+  height: 5px;
+  border-radius: 999px;
+  background: var(--sr-line);
+  overflow: hidden;
+}
+.sr-timer__fill {
+  display: block;
+  height: 100%;
+  background: var(--pace, var(--sr-spectral));
+  transition: width 0.9s linear;
+}
+.sr-timer__controls {
+  display: flex;
+  gap: 0.5rem;
+}
+.sr-timer__btn {
+  flex: 1;
+  justify-content: center;
+  padding: 0.5em 0.75em;
+  font-size: 0.85rem;
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 900px) {
+  .sr-timeline__row {
+    grid-template-columns: 6rem 1fr;
+  }
+  .sr-timeline__row .sr-chip {
+    grid-column: 2;
+    justify-self: start;
+  }
+}
+@media (max-width: 600px) {
+  .sr-timer {
+    left: 0.5rem;
+    right: 0.5rem;
+    bottom: 0.5rem;
+    width: auto;
+  }
+}
+
+/* ---- Reduced motion ---- */
+@media (prefers-reduced-motion: reduce) {
+  .sr-timer__fill {
+    transition: none;
+  }
+}

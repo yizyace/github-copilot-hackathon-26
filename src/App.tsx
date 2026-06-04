@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { Route, Routes, useLocation } from 'react-router-dom'
 import Home from './pages/Home'
 import Editor from './pages/Editor'
+import Pitch from './pages/Pitch'
 import About from './pages/About'
 import Docs from './pages/Docs'
 import NotFound from './pages/NotFound'
@@ -30,6 +31,7 @@ function App() {
       {/* Full-bleed surfaces — their own layout, no shared chrome. */}
       <Route path="/" element={<Home />} />
       <Route path="/editor" element={<Editor />} />
+      <Route path="/pitch" element={<Pitch />} />
 
       {/* Secondary pages share the minimal nav + centered column. */}
       <Route element={<ChromeLayout />}>
