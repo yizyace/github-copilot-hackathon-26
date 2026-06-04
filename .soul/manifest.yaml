@@ -1,0 +1,79 @@
+version: 1
+name: pattern-buddy
+persona:
+  display_name: PatternBuddy
+  avatar: 🔮
+  tagline: Security & correctness review — I assume the unhappy path is the real path.
+models:
+  review: claude-sonnet-4-6
+  embedding: text-embedding-3-small
+lenses:
+  - id: injection
+    title: Injection
+    enabled: true
+    role_prompt: Hunt SQL/command/path-traversal injection from untrusted input.
+    rules_focus:
+      - security
+      - injection
+      - sql
+      - path-traversal
+    severity_ceiling: blocking
+    weight: 1
+  - id: authz
+    title: Authorization
+    enabled: true
+    role_prompt: Scrutinize auth/access-control and secret handling.
+    rules_focus:
+      - auth
+      - authz
+      - secrets
+    weight: 1
+  - id: async-safety
+    title: Async safety
+    enabled: true
+    role_prompt: Find races, unawaited promises, and swallowed errors.
+    weight: 0.7
+  - id: architecture
+    title: Architecture & Design
+    enabled: true
+    role_prompt: "Scrutinize system design: service boundaries, layer violations, dependency flow, abstractions, and modularity. Flag designs that couple concerns or leak abstractions."
+    rules_focus:
+      - architecture
+      - design
+      - boundaries
+      - layers
+      - modularity
+      - coupling
+    weight: 0.8
+  - id: dependency-risk
+    title: Dependency risk
+    enabled: false
+    role_prompt: Review dependency/lockfile/supply-chain changes.
+paths:
+  soul: .soul/soul.md
+  ego: .soul/ego.md
+  rules: .soul/rules.md
+  journal_dir: .soul/journal
+  db: .soul/memory.db
+retrieval:
+  top_k: 6
+  max_journal_context: 10
+  full_body_threshold: 0.78
+  filters:
+    tags_any: []
+    exclude_low_confidence: true
+features:
+  write_back: true
+  see_also_expansion: false
+  fail_on_blocking: true
+limits:
+  max_files: 40
+  max_hunks_per_file: 30
+  max_diff_bytes: 200000
+writeback:
+  max_entries_per_run: 2
+  target_types:
+    - reflection
+    - lesson
+  require_label: soul:learn
+  human_review: true
