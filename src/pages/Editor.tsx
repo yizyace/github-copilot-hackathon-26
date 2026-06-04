@@ -4,6 +4,8 @@ import '../styles/theme.css'
 import '../components/editor/editor.css'
 import { patternBuddyStack } from '../lib/soulStack/sample'
 import type { SoulStack } from '../lib/soulStack/types'
+import type { ReviewResult } from '../lib/review/types'
+import { runReview, commitSoul, type CommitResult } from '../lib/api'
 import { SIZE_LIMITS, countIssues, validateSoulStack } from '../lib/soulStack/validate'
 import { clearStack, loadStack, saveStack } from '../lib/soulStack/storage'
 import { downloadSoulZip } from '../lib/soulStack/exportZip'
@@ -19,10 +21,38 @@ function Editor() {
   const [stack, setStack] = useState<SoulStack>(() => loadStack(structuredClone(patternBuddyStack)))
   const [target, setTarget] = useState<Target>('manifest')
   const [demoOpen, setDemoOpen] = useState(false)
+  const [reviewResult, setReviewResult] = useState<ReviewResult | undefined>(undefined)
+  const [reviewLoading, setReviewLoading] = useState(false)
+  const [committing, setCommitting] = useState(false)
+  const [commitStatus, setCommitStatus] = useState<CommitResult | null>(null)
 
   useEffect(() => {
     saveStack(stack)
   }, [stack])
+
+  const runLiveReview = async () => {
+    setReviewResult(undefined)
+    setReviewLoading(true)
+    setDemoOpen(true)
+    const result = await runReview(stack)
+    setReviewResult(result)
+    setReviewLoading(false)
+  }
+
+  const closeReview = () => {
+    setDemoOpen(false)
+    setReviewResult(undefined)
+    setReviewLoading(false)
+  }
+
+  const updateRepo = async () => {
+    setCommitting(true)
+    setCommitStatus(null)
+    const result = await commitSoul(stack)
+    setCommitStatus(result)
+    setCommitting(false)
+    if (result.prUrl) window.open(result.prUrl, '_blank')
+  }
 
   const issues = useMemo(() => validateSoulStack(stack), [stack])
   const { errors, warnings } = countIssues(issues)
@@ -66,14 +96,40 @@ function Editor() {
           <button type="button" className="sr-btn sr-btn--ghost" onClick={reset}>
             Reset
           </button>
-          <button type="button" className="sr-btn sr-btn--spectral" onClick={() => setDemoOpen(true)}>
-            Run demo review
+          <button type="button" className="sr-btn sr-btn--spectral" onClick={runLiveReview}>
+            Run review
           </button>
-          <button type="button" className="sr-btn sr-btn--primary" onClick={() => downloadSoulZip(stack)}>
+          <button type="button" className="sr-btn sr-btn--ghost" onClick={() => downloadSoulZip(stack)}>
             Export .soul/
+          </button>
+          <button
+            type="button"
+            className="sr-btn sr-btn--primary"
+            onClick={updateRepo}
+            disabled={committing}
+          >
+            {committing ? 'Updating…' : 'Update repo'}
           </button>
         </div>
       </header>
+
+      {commitStatus && (
+        <div role="status" className="sr-editor__commit">
+          {commitStatus.prUrl ? (
+            <span>
+              Pull request opened —{' '}
+              <a href={commitStatus.prUrl} target="_blank" rel="noreferrer">
+                view it on GitHub
+              </a>
+              .
+            </span>
+          ) : commitStatus.stub ? (
+            <span>Update needs the bot token configured in Azure.</span>
+          ) : (
+            <span>Couldn’t open a pull request{commitStatus.error ? `: ${commitStatus.error}` : '.'}</span>
+          )}
+        </div>
+      )}
 
       <div className="sr-editor__body">
         <nav className="sr-editor__nav" aria-label="Soul Stack files">
@@ -129,7 +185,9 @@ function Editor() {
         <SidePanel stack={stack} issues={issues} />
       </div>
 
-      {demoOpen && <DemoReviewPanel onClose={() => setDemoOpen(false)} />}
+      {demoOpen && (
+        <DemoReviewPanel onClose={closeReview} result={reviewResult} loading={reviewLoading} />
+      )}
     </div>
   )
 }

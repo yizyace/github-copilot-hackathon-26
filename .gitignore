@@ -29,3 +29,6 @@ node_modules
 
 # Playwright MCP screenshots/snapshots
 .playwright-mcp/
+
+# Azure Functions local secrets — never commit (use Azure app settings in prod)
+api/local.settings.json

@@ -1,16 +1,25 @@
 import { useEffect, useRef, useState } from 'react'
 import { sampleReviewResult } from '../../lib/review/sampleReviewResult'
+import type { ReviewResult } from '../../lib/review/types'
 import { ReviewCard } from '../ui/ReviewCard'
 import { LensCard } from '../ui/LensCard'
 import { prefersReducedMotion } from '../landing/useInView'
 
 const PHASES = ['Loading soul stack', 'Retrieving memories', 'Running lenses', 'Synthesizing', 'Done']
 
-// A canned run of the review engine: animate the phases, then render the
-// pre-captured ReviewResult. No engine, no keys — the panels are pure functions
-// of ReviewResult, exactly as the real harness renders them. Uses a native
-// <dialog> so focus trap, Escape, and focus return are handled by the platform.
-export function DemoReviewPanel({ onClose }: { onClose: () => void }) {
+interface DemoReviewPanelProps {
+  onClose: () => void
+  result?: ReviewResult
+  loading?: boolean
+}
+
+// A run of the review engine: animate the phases, then render a ReviewResult.
+// When a live `result` is passed it renders that; otherwise it falls back to the
+// pre-captured sampleReviewResult (no engine, no keys). The panels are pure
+// functions of ReviewResult, exactly as the real harness renders them. Uses a
+// native <dialog> so focus trap, Escape, and focus return are handled by the
+// platform.
+export function DemoReviewPanel({ onClose, result, loading }: DemoReviewPanelProps) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const [phase, setPhase] = useState(() => (prefersReducedMotion() ? PHASES.length - 1 : 0))
 
@@ -33,7 +42,11 @@ export function DemoReviewPanel({ onClose }: { onClose: () => void }) {
     return () => clearTimeout(t)
   }, [phase])
 
-  const done = phase >= PHASES.length - 1
+  // The result to render: the live one if given, else the canned fallback.
+  const shown = result ?? sampleReviewResult
+  // Hold on the animation while the live call is in flight; reveal once the
+  // phases finish and we're no longer loading.
+  const done = phase >= PHASES.length - 1 && !loading
   const close = () => dialogRef.current?.close()
 
   return (
@@ -57,15 +70,16 @@ export function DemoReviewPanel({ onClose }: { onClose: () => void }) {
 
       {done && (
         <div className="sr-modal__result">
-          <ReviewCard result={sampleReviewResult} />
+          <ReviewCard result={shown} />
           <div className="sr-modal__lenses">
-            {sampleReviewResult.lenses.map((l) => (
+            {shown.lenses.map((l) => (
               <LensCard key={l.id} lens={l} />
             ))}
           </div>
           <p className="sr-modal__note">
-            Pre-captured result — the engine runs this same review in CI (the Action) and in the
-            local harness.
+            {result
+              ? 'Live result — the engine runs this same review in CI (the Action) and in the local harness.'
+              : 'Pre-captured result — the engine runs this same review in CI (the Action) and in the local harness.'}
           </p>
         </div>
       )}
