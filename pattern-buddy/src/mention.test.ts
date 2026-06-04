@@ -5,8 +5,26 @@ import {
   buildSkillFile,
   parseApplyChange,
   buildMentionPrompt,
+  safeSlug,
 } from './mention';
 import { parseSkill } from './skillLoader';
+
+describe('safeSlug', () => {
+  it('accepts lowercase kebab-case slugs', () => {
+    expect(safeSlug('factory-singleton')).toBe('factory-singleton');
+    expect(safeSlug('coupling')).toBe('coupling');
+    expect(safeSlug('a1-b2')).toBe('a1-b2');
+  });
+
+  it('rejects path traversal and other unsafe slugs', () => {
+    expect(() => safeSlug('../../.github/workflows/pattern-buddy-mention')).toThrow();
+    expect(() => safeSlug('foo/bar')).toThrow();
+    expect(() => safeSlug('UPPER')).toThrow();
+    expect(() => safeSlug('-leading-hyphen')).toThrow();
+    expect(() => safeSlug('')).toThrow();
+    expect(() => safeSlug('a'.repeat(65))).toThrow();
+  });
+});
 
 describe('stripTrigger', () => {
   it('removes the trigger and collapses whitespace', () => {
