@@ -4,7 +4,7 @@
 > accumulated pattern memory after every merged PR — **do not edit by hand**, your
 > changes will be overwritten on the next merge.
 >
-> Last updated: **PR #11 — feat: add architecture review skill to soul stack** · 2026-06-04
+> Last updated: **PR #10 — feat: live review preview + one-click 'Update repo' PR (Soul Review /api)** · 2026-06-04
 
 ```mermaid
 graph TD
@@ -12,94 +12,89 @@ graph TD
   classDef watch fill:#fff3cd,stroke:#ffc107,color:#856404;
   classDef danger fill:#f8d7da,stroke:#dc3545,color:#721c24;
 
-  index["index.ts"] -->|"dispatches strategy ✅"| runAnalysis["runAnalysis"]
-  index -->|"dispatches strategy ✅"| runArchitecture["runArchitecture"]
-  index -->|"immutable pipeline ✅"| inputBuilder["inputBuilder"]
-  index -->|"immutable pipeline ✅"| claudeCaller["claudeCaller"]
-  index -->|"immutable pipeline ✅"| commentPoster["commentPoster"]
-  index -->|"immutable pipeline ✅"| mdUpdater["mdUpdater"]
-  index -->|"immutable pipeline ✅"| architectureMapper["architectureMapper"]
-  index -->|"immutable pipeline ✅"| architectureInput["architectureInput"]
-  index -->|"immutable pipeline ✅"| architectureCommitter["architectureCommitter"]
-  index -->|"immutable pipeline ✅"| architectureComment["architectureComment"]
-
-  anthropicClient["anthropicClient"] -->|"consolidated env coupling ⚠️"| ActionsCore["ActionsCore"]
-  claudeCaller -->|"calls ✅"| anthropicClient
-  claudeCaller -->|"calls ✅"| extractJson["extractJson"]
-  architectureMapper -->|"calls ✅"| extractJson
-  architectureMapper -->|"calls ✅"| anthropicClient
-
-  commentPoster -->|"tight coupling 🔴"| ActionsCore
-  architectureComment -->|"tight coupling 🔴"| ActionsCore
-  architectureInput -->|"tight coupling 🔴"| ActionsCore
-  commitFile["commitFile"] -->|"tight coupling 🔴"| ActionsCore
-  mdUpdater -->|"tight coupling 🔴"| ActionsCore
-  mdUpdater -->|"dual Octokit ⚠️"| commitFile
-  mdUpdater -->|"SRP violation ⚠️"| GitHubAPI["GitHubAPI"]
-
-  commitFile -->|"unsafe cast ⚠️"| GitHubAPI
-  inputBuilder -->|"unsafe cast ⚠️"| GitHubAPI
-  architectureComment -->|"depends on ✅"| architectureMapper
-  architectureCommitter -->|"depends on ✅"| commitFile
-
-  apiReview["api/review"] -->|"env coupling 🔴"| ProcessEnv["ProcessEnv"]
-  apiReview -->|"SRP violation 🔴"| AnthropicAPI["AnthropicAPI"]
-  apiReview -->|"graceful degradation ✅"| buildStub["buildStub"]
-  apiCommit["api/commit"] -->|"env coupling 🔴"| ProcessEnv
-  apiCommit -->|"tight coupling 🔴"| GitHubAPI
-  apiReview -->|"duplicate respond helper ⚠️"| apiCommit
-
-  apiLib["src/lib/api.ts"] -->|"facade ✅"| apiReview
-  apiLib -->|"facade ✅"| apiCommit
-  Editor["Editor"] -->|"calls via facade ✅"| apiLib
-  Editor -->|"depends on ✅"| DemoReviewPanel["DemoReviewPanel"]
-  DemoReviewPanel -->|"open/closed extension ✅"| sampleReviewResult["sampleReviewResult"]
-
-  exportZip["exportZip"] -->|"DOM coupling 🔴"| DOMLayer["DOMLayer"]
-  exportZip -->|"SRP violation ⚠️"| ZipLogic["ZipLogic"]
-  storage["storage"] -->|"localStorage coupling ⚠️"| LocalStorage["LocalStorage"]
-  Editor -->|"depends on ✅"| storage
-  Editor -->|"depends on ✅"| exportZip
-
-  config["config.ts"] -->|"SRP extraction ✅"| inputBuilder
-  sampleTs["sample.ts"] -->|"magic threshold ⚠️"| ArchHeuristics["ArchHeuristics"]
-  sampleTs -->|"duplicated guidance ⚠️"| ArchHeuristics
-
-  distBundle["dist/index.js"] -->|"committed artifact ⚠️"| index
+  index[index.ts] -->|dispatches strategy ✅| runAnalysis[runAnalysis]
+  index -->|dispatches strategy ✅| runArchitecture[runArchitecture]
+  runAnalysis -->|calls ✅| inputBuilder[inputBuilder.ts]
+  runAnalysis -->|calls ✅| historyLoader[historyLoader.ts]
+  runAnalysis -->|calls ✅| claudeCaller[claudeCaller.ts]
+  runAnalysis -->|calls ✅| commentPoster[commentPoster.ts]
+  runAnalysis -->|calls ✅| mdUpdater[mdUpdater.ts]
+  runArchitecture -->|calls ✅| architectureInput[architectureInput.ts]
+  runArchitecture -->|calls ✅| architectureMapper[architectureMapper.ts]
+  runArchitecture -->|calls ✅| architectureCommitter[architectureCommitter.ts]
+  runArchitecture -->|calls ✅| architectureComment[architectureComment.ts]
+  anthropicClient[anthropicClient.ts] -->|tight coupling to Actions runtime ⚠️| ActionsCore[ActionsCore]
+  claudeCaller -->|tight coupling to Actions runtime ⚠️| ActionsCore
+  commentPoster -->|tight coupling to Actions runtime ⚠️| ActionsCore
+  commitFile[commitFile.ts] -->|tight coupling to Actions runtime ⚠️| ActionsCore
+  architectureComment -->|tight coupling to Actions runtime ⚠️| ActionsCore
+  architectureInput -->|tight coupling to Actions runtime ⚠️| ActionsCore
+  claudeCaller -->|uses ✅| anthropicClient
+  architectureMapper -->|uses ✅| anthropicClient
+  claudeCaller -->|uses ✅| extractJson[extractJson.ts]
+  architectureMapper -->|uses ✅| extractJson
+  mdUpdater -->|calls ✅| commitFile
+  mdUpdater -->|SRP violation - owns filesystem + commit ⚠️| commitFile
+  mdUpdater -->|duplicate Octokit construction ⚠️| ActionsCore
+  architectureCommitter -->|calls ✅| commitFile
+  inputBuilder -->|unsafe type cast ⚠️| OctokitTypes[OctokitTypes]
+  commitFile -->|unsafe type cast ⚠️| OctokitTypes
+  mdUpdater -->|section header duplication ⚠️| historyLoader
+  reviewHandler[api/review/index.js] -->|reads env inline 🔴| ProcessEnv[process.env]
+  commitHandler[api/commit/index.js] -->|reads env inline 🔴| ProcessEnv
+  reviewHandler -->|SRP violation - orchestration+prompt+call+normalise 🔴| AnthropicAPI[AnthropicAPI]
+  commitHandler -->|tight coupling - token inline 🔴| GitHubAPI[GitHubAPI]
+  reviewHandler -->|duplicate respond helper ⚠️| commitHandler
+  apiLib[api.ts] -->|facade over fetch ✅| reviewHandler
+  apiLib -->|facade over fetch ✅| commitHandler
+  Editor[Editor.tsx] -->|calls ✅| apiLib
+  Editor -->|calls ✅| storage[storage.ts]
+  storage -->|implicit global state - localStorage 🔴| LocalStorage[localStorage]
+  exportZip[exportZip.ts] -->|SRP violation - zip + DOM 🔴| DOMLayer[DOM]
+  JournalEditor[JournalEditor.tsx] -->|index as key anti-pattern ⚠️| ReactDOM[ReactDOM]
+  sampleStack[sample.ts] -->|magic number threshold ⚠️| ConfigValues[implicit config values]
+  sampleStack -->|knowledge duplication across sections ⚠️| ConfigValues
+  config[config.ts] -->|SRP improvement - extracted config ✅| inputBuilder
+  DemoReviewPanel[DemoReviewPanel.tsx] -->|graceful degradation ✅| apiLib
+  gitignore[.gitignore] -->|committed build artifact ⚠️| distBundle[dist/index.js]
+  distBundle -->|DRY duplication of source ⚠️| claudeCaller
 
   class index clean;
   class runAnalysis clean;
   class runArchitecture clean;
-  class anthropicClient watch;
-  class claudeCaller watch;
-  class extractJson clean;
-  class architectureMapper clean;
-  class commentPoster danger;
-  class architectureComment danger;
-  class architectureInput danger;
-  class architectureCommitter watch;
-  class commitFile danger;
-  class mdUpdater danger;
   class inputBuilder watch;
+  class historyLoader clean;
+  class claudeCaller watch;
+  class commentPoster watch;
+  class mdUpdater watch;
+  class architectureInput watch;
+  class architectureMapper clean;
+  class architectureCommitter clean;
+  class architectureComment watch;
+  class anthropicClient watch;
+  class extractJson clean;
+  class commitFile watch;
   class config clean;
-  class apiReview danger;
-  class apiCommit danger;
-  class buildStub clean;
+  class reviewHandler danger;
+  class commitHandler danger;
   class apiLib clean;
   class Editor clean;
-  class DemoReviewPanel clean;
-  class sampleReviewResult clean;
+  class storage danger;
   class exportZip danger;
-  class storage watch;
-  class sampleTs watch;
+  class JournalEditor watch;
+  class sampleStack watch;
+  class DemoReviewPanel clean;
+  class gitignore watch;
   class distBundle watch;
   class ActionsCore watch;
-  class GitHubAPI watch;
   class ProcessEnv danger;
+  class OctokitTypes watch;
+  class AnthropicAPI clean;
+  class GitHubAPI clean;
+  class LocalStorage danger;
   class DOMLayer watch;
-  class ZipLogic clean;
-  class LocalStorage watch;
-  class ArchHeuristics watch;
+  class ReactDOM watch;
+  class ConfigValues watch;
 ```
 
 ### Legend
@@ -110,4 +105,4 @@ graph TD
 
 ### Architect's notes
 
-The codebase has two distinct sub-systems — a GitHub Actions pipeline (pattern-buddy/src/) and a web app with a serverless API (src/, api/) — connected by a shared coupling anti-pattern: every module that needs an external client (Octokit, Anthropic, env vars, DOM) constructs it inline rather than receiving it as a dependency. This is the single most pervasive danger zone, affecting commentPoster, architectureComment, architectureInput, commitFile, mdUpdater, api/review, and api/commit — all colored danger. The Actions pipeline's core orchestration (index.ts, the immutable pipeline, extractJson, config) is architecturally clean and well-structured, as is the client-side facade (api.ts, Editor, DemoReviewPanel). Priority remediation: introduce dependency injection at the infrastructure boundary (Octokit factory, Anthropic factory, env config module) so business-logic modules stop reaching into the runtime directly — this single change would promote six danger nodes to watch or clean.
+The codebase has two distinct layers with very different health profiles. The pattern-buddy GitHub Actions pipeline (index.ts → strategy functions → context-threaded pipeline stages) is architecturally sound — it uses the Strategy and immutable Pipeline patterns well, and positive extractions like extractJson.ts and config.ts show the right instincts — but nearly every module that touches an external client (Octokit, Anthropic API key) hard-constructs that client internally rather than accepting it as a dependency, creating a pervasive Actions-runtime coupling smell across claudeCaller, commentPoster, commitFile, architectureInput, and architectureComment. The API layer (api/review and api/commit) is the highest-risk zone: both handlers collapse orchestration, prompt-building, API calls, and environment-variable resolution into single monolithic functions, violating SRP and making them untestable without live credentials. On the frontend, storage.ts and exportZip.ts are danger nodes — implicit localStorage coupling and DOM manipulation baked into business logic respectively — while the new api.ts facade and DemoReviewPanel graceful-degradation pattern are genuine bright spots. The team should prioritise dependency injection for infrastructure clients (Octokit, Anthropic) across the pattern-buddy layer, and decompose the two API handlers into discrete, testable units.
