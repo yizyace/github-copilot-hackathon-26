@@ -1,32 +1,7 @@
 import * as core   from '@actions/core';
 import * as github from '@actions/github';
-import * as fs     from 'fs';
-import * as path   from 'path';
-import { AnalysisContext, InputPayload, PRMetadata, BuddyConfig } from './types';
-
-const DEFAULT_CONFIG: BuddyConfig = {
-  tone:       'mentor',
-  strictness: 'balanced'
-};
-
-function loadConfig(): BuddyConfig {
-  const configPath = path.join(process.cwd(), 'pattern-pointers.config.json');
-  if (!fs.existsSync(configPath)) {
-    core.info('PatternBuddy: No config file found. Using defaults (mentor / balanced).');
-    return DEFAULT_CONFIG;
-  }
-  try {
-    const raw    = fs.readFileSync(configPath, 'utf8');
-    const parsed = JSON.parse(raw) as Partial<BuddyConfig>;
-    return {
-      tone:       parsed.tone       ?? DEFAULT_CONFIG.tone,
-      strictness: parsed.strictness ?? DEFAULT_CONFIG.strictness
-    };
-  } catch {
-    core.warning('PatternBuddy: Config file is malformed. Using defaults.');
-    return DEFAULT_CONFIG;
-  }
-}
+import { AnalysisContext, InputPayload, PRMetadata } from './types';
+import { loadConfig } from './config';
 
 export async function buildInput(): Promise<AnalysisContext> {
   const octokit = github.getOctokit(core.getInput('github-token'));

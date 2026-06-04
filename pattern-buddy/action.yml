@@ -11,6 +11,10 @@ inputs:
     description: 'PR number to analyze (used when triggering via workflow_dispatch)'
     required: false
     default: ''
+  mode:
+    description: 'Force a pass: "analyze" (per-PR review) or "architecture" (regenerate the map). Leave empty to auto-detect from the event (merged PR → architecture).'
+    required: false
+    default: ''
 runs:
   using: 'node20'
   main: 'dist/index.js'

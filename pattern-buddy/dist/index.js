@@ -40381,7 +40381,7 @@ function wrappy (fn, cb) {
 
 /***/ }),
 
-/***/ 3022:
+/***/ 688:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -40423,10 +40423,450 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.callClaude = callClaude;
+exports.createAnthropicClient = createAnthropicClient;
 const sdk_1 = __importDefault(__nccwpck_require__(121));
 const core = __importStar(__nccwpck_require__(7484));
+/**
+ * Resolves the Anthropic API key from the Action inputs / environment and
+ * returns a configured client. Centralising this keeps the runtime-environment
+ * coupling out of the business-logic modules that call Claude.
+ */
+function createAnthropicClient() {
+    const apiKey = core.getInput('anthropic-api-key') || process.env.ANTHROPIC_API_KEY || '';
+    if (!apiKey) {
+        throw new Error('ANTHROPIC_API_KEY secret is not set or is empty. Add it under repo Settings → Secrets → Actions.');
+    }
+    if (!apiKey.startsWith('sk-ant-')) {
+        throw new Error(`ANTHROPIC_API_KEY looks incorrect — expected it to start with "sk-ant-" but got a key starting with "${apiKey.slice(0, 6)}...". Check the secret value.`);
+    }
+    core.info(`PatternBuddy: Anthropic API key resolved: yes (length ${apiKey.length}, prefix ok)`);
+    return new sdk_1.default({ apiKey });
+}
+
+
+/***/ }),
+
+/***/ 575:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.postArchitectureComment = postArchitectureComment;
+const core = __importStar(__nccwpck_require__(7484));
+const github = __importStar(__nccwpck_require__(3228));
+/**
+ * Posts a short comment on the merged PR linking to the freshly-updated map.
+ */
+async function postArchitectureComment(context) {
+    const { repoOwner, repoName, prNumber, baseBranch } = context;
+    const { output } = context.config.architectureMap;
+    const octokit = github.getOctokit(core.getInput('github-token'));
+    const url = `${process.env.GITHUB_SERVER_URL ?? 'https://github.com'}/${repoOwner}/${repoName}/blob/${baseBranch}/${output}`;
+    await octokit.rest.issues.createComment({
+        owner: repoOwner,
+        repo: repoName,
+        issue_number: prNumber,
+        body: `📐 **Architecture map updated** — this merge reshaped the codebase's topology.\n\n[View the living architecture map](${url}) 🗺️`
+    });
+    core.info(`PatternBuddy: Posted architecture-map comment on PR #${prNumber}.`);
+    return context;
+}
+
+
+/***/ }),
+
+/***/ 3342:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.commitArchitectureMap = commitArchitectureMap;
+const core = __importStar(__nccwpck_require__(7484));
+const commitFile_1 = __nccwpck_require__(5800);
+/**
+ * Commits the rendered architecture map to the configured output path on the
+ * branch the PR was merged into.
+ */
+async function commitArchitectureMap(context) {
+    const { output } = context.config.architectureMap;
+    await (0, commitFile_1.commitFile)({
+        owner: context.repoOwner,
+        repo: context.repoName,
+        branch: context.baseBranch,
+        path: output,
+        content: context.architecture.markdown,
+        message: `chore: PatternBuddy updates architecture map for PR #${context.prNumber}`
+    });
+    core.info(`PatternBuddy: Committed architecture map to ${output} on ${context.baseBranch}.`);
+    return context;
+}
+
+
+/***/ }),
+
+/***/ 9994:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.buildArchitectureInput = buildArchitectureInput;
+const core = __importStar(__nccwpck_require__(7484));
+const github = __importStar(__nccwpck_require__(3228));
+const fs = __importStar(__nccwpck_require__(9896));
+const path = __importStar(__nccwpck_require__(6928));
+const config_1 = __nccwpck_require__(2973);
+const MD_PATH = path.join(process.cwd(), '.pattern-pointers.md');
+/**
+ * Builds the context for the post-merge architecture pass. Unlike the per-PR
+ * analysis, this reads the full accumulated pattern memory and targets the
+ * branch the PR was merged into (so the committed map lands on the base branch).
+ */
+async function buildArchitectureInput() {
+    const octokit = github.getOctokit(core.getInput('github-token'));
+    const ctx = github.context;
+    const prFromEvent = ctx.payload.pull_request;
+    const prNumInput = core.getInput('pr-number');
+    const prNumber = prFromEvent?.number ?? (prNumInput ? parseInt(prNumInput, 10) : undefined);
+    if (!prNumber)
+        throw new Error('PatternBuddy: No pull request found. Provide pr-number input when triggering manually.');
+    const { data: pr } = await octokit.rest.pulls.get({
+        owner: ctx.repo.owner,
+        repo: ctx.repo.repo,
+        pull_number: prNumber
+    });
+    const memory = fs.existsSync(MD_PATH) ? fs.readFileSync(MD_PATH, 'utf8') : '';
+    return {
+        prNumber,
+        prTitle: pr.title,
+        author: pr.user?.login ?? 'unknown',
+        baseBranch: pr.base.ref,
+        repoOwner: ctx.repo.owner,
+        repoName: ctx.repo.repo,
+        config: (0, config_1.loadConfig)(),
+        memory,
+        architecture: { mermaid: '', summary: '', markdown: '' }
+    };
+}
+
+
+/***/ }),
+
+/***/ 4857:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.generateArchitectureMap = generateArchitectureMap;
+const core = __importStar(__nccwpck_require__(7484));
+const anthropicClient_1 = __nccwpck_require__(688);
+const architecturePrompt_template_1 = __nccwpck_require__(8348);
+const extractJson_1 = __nccwpck_require__(9756);
+const FALLBACK_MERMAID = 'graph TD\n' +
+    '  classDef clean fill:#d4edda,stroke:#28a745,color:#155724;\n' +
+    '  Codebase\n' +
+    '  class Codebase clean;';
+/** Strips any ```mermaid fences Claude may have left inside the JSON string. */
+function stripMermaidFence(s) {
+    const fenced = s.match(/```(?:mermaid)?\s*([\s\S]*?)```/);
+    return (fenced ? fenced[1] : s).trim();
+}
+function parseArchitecture(raw) {
+    try {
+        const obj = JSON.parse((0, extractJson_1.extractJson)(raw));
+        if (obj && typeof obj.mermaid === 'string' && obj.mermaid.trim()) {
+            return {
+                mermaid: stripMermaidFence(obj.mermaid),
+                summary: typeof obj.summary === 'string' ? obj.summary.trim() : ''
+            };
+        }
+    }
+    catch {
+        // Fall through to fenced-block / fallback handling below.
+    }
+    const fence = raw.match(/```mermaid\s*([\s\S]*?)```/);
+    if (fence)
+        return { mermaid: fence[1].trim(), summary: '' };
+    core.warning('PatternBuddy: Could not parse an architecture diagram from Claude. Using fallback.');
+    return { mermaid: FALLBACK_MERMAID, summary: '' };
+}
+function renderArchitectureDoc(context, mermaid, summary) {
+    const date = new Date().toISOString().slice(0, 10);
+    const notes = summary || '_No notes generated for this update._';
+    return `# 🗺️ Architecture Map
+
+> **Auto-generated by [PatternBuddy](../.pattern-pointers.md).** Regenerated from the
+> accumulated pattern memory after every merged PR — **do not edit by hand**, your
+> changes will be overwritten on the next merge.
+>
+> Last updated: **PR #${context.prNumber} — ${context.prTitle}** · ${date}
+
+\`\`\`mermaid
+${mermaid}
+\`\`\`
+
+### Legend
+
+- 🟢 **Clean** — sound patterns (Factory, Repository, SOLID-compliant, loose coupling)
+- 🟡 **Watch** — tight coupling or emerging anti-patterns worth keeping an eye on
+- 🔴 **Danger** — God classes, circular dependencies, high coupling centrality
+
+### Architect's notes
+
+${notes}
+`;
+}
+async function generateArchitectureMap(context) {
+    const client = (0, anthropicClient_1.createAnthropicClient)();
+    const prompt = (0, architecturePrompt_template_1.buildArchitecturePrompt)(context);
+    const message = await client.messages.create({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 4096,
+        messages: [{ role: 'user', content: prompt }]
+    });
+    const block = message.content[0];
+    if (block.type !== 'text') {
+        throw new Error('Unexpected Claude response type — expected text block.');
+    }
+    const { mermaid, summary } = parseArchitecture(block.text);
+    const markdown = renderArchitectureDoc(context, mermaid, summary);
+    const architecture = { mermaid, summary, markdown };
+    return { ...context, architecture };
+}
+
+
+/***/ }),
+
+/***/ 8348:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.buildArchitecturePrompt = buildArchitecturePrompt;
+/**
+ * Builds the prompt that turns the accumulated pattern memory into a
+ * health-colored Mermaid topology diagram. Asks for a strict JSON object so the
+ * response is machine-parseable: { "mermaid": "...", "summary": "..." }.
+ */
+function buildArchitecturePrompt(context) {
+    return `You are PatternBuddy — a senior software architect maintaining a *living architecture map* of a codebase.
+
+You are given the full pattern memory: every architectural observation PatternBuddy has recorded across all pull requests, in Markdown. Each entry names a file/module, a pattern or anti-pattern, and a short observation.
+
+Your job: synthesize ALL of these observations into a single Mermaid \`graph TD\` that shows the codebase's architectural topology — which modules relate to which, and how healthy each relationship is.
+
+PATTERN MEMORY (from .pattern-pointers.md):
+${context.memory || 'No pattern memory recorded yet.'}
+
+RULES FOR THE DIAGRAM:
+1. Each node is a module/component named in the memory (use short, readable names — derive a module name from the file path, e.g. \`mdUpdater\` from \`pattern-buddy/src/mdUpdater.ts\`).
+2. Each edge is a relationship the memory implies (depends-on, creates, calls, couples-to). Label edges with the relationship and a health emoji:
+   - clean relationships: ✅   (e.g. \`A -->|Factory ✅| B\`)
+   - watch-zone relationships: ⚠️   (e.g. \`A -->|tight coupling ⚠️| B\`)
+   - danger relationships: 🔴   (e.g. \`A -->|God class 🔴| B\`)
+3. Color every node by its overall health using these EXACT classDefs at the top of the graph, then assign each node a class:
+   classDef clean fill:#d4edda,stroke:#28a745,color:#155724;
+   classDef watch fill:#fff3cd,stroke:#ffc107,color:#856404;
+   classDef danger fill:#f8d7da,stroke:#dc3545,color:#721c24;
+   - clean: sound patterns (Factory, Repository, SOLID-compliant, loose coupling)
+   - watch: tight coupling, emerging anti-patterns, DRY/SOLID smells
+   - danger: God classes, circular dependencies, high coupling centrality
+4. Use \`class NodeName clean;\` (or watch/danger) lines to assign colors. A node with no recorded issues defaults to clean.
+5. Produce VALID Mermaid only — no syntax that Mermaid can't render. Do not wrap node names in quotes unless they contain spaces.
+6. If the memory is empty or has no usable relationships, return a minimal graph with a single node \`Codebase\` classed clean.
+
+OUTPUT FORMAT — return ONLY a JSON object, no prose, no markdown fences:
+{
+  "mermaid": "graph TD\\n  classDef clean ...;\\n  A -->|...| B\\n  class A clean;",
+  "summary": "2-4 sentences: the overall shape of the architecture and where the danger zones are. Written as an architect briefing a team."
+}
+
+The "mermaid" value must be the graph body only (starting with "graph TD"), with newlines escaped as \\n. Return ONLY the JSON object.`;
+}
+
+
+/***/ }),
+
+/***/ 3022:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.callClaude = callClaude;
+const core = __importStar(__nccwpck_require__(7484));
 const prompt_template_1 = __nccwpck_require__(8141);
+const anthropicClient_1 = __nccwpck_require__(688);
+const extractJson_1 = __nccwpck_require__(9756);
 function validateFinding(obj) {
     if (typeof obj !== 'object' || obj === null)
         return false;
@@ -40442,23 +40882,10 @@ function validateFinding(obj) {
         typeof f.mdSection === 'string' &&
         typeof f.isRecurring === 'boolean');
 }
-function extractJSON(raw) {
-    const trimmed = raw.trim();
-    // Try extracting from ```json ... ``` or ``` ... ``` fences
-    const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/);
-    if (fenced)
-        return fenced[1].trim();
-    // Try extracting a bare JSON array
-    const arrayStart = trimmed.indexOf('[');
-    const arrayEnd = trimmed.lastIndexOf(']');
-    if (arrayStart !== -1 && arrayEnd > arrayStart)
-        return trimmed.slice(arrayStart, arrayEnd + 1);
-    return trimmed;
-}
 function parseFindings(raw) {
     let parsed;
     try {
-        parsed = JSON.parse(extractJSON(raw));
+        parsed = JSON.parse((0, extractJson_1.extractJson)(raw));
     }
     catch {
         core.error(`PatternBuddy: Claude returned unparseable JSON.\nRaw response:\n${raw}`);
@@ -40475,15 +40902,7 @@ function parseFindings(raw) {
     return valid;
 }
 async function callClaude(context) {
-    const apiKey = core.getInput('anthropic-api-key') || process.env.ANTHROPIC_API_KEY || '';
-    if (!apiKey) {
-        throw new Error('ANTHROPIC_API_KEY secret is not set or is empty. Add it under repo Settings → Secrets → Actions.');
-    }
-    if (!apiKey.startsWith('sk-ant-')) {
-        throw new Error(`ANTHROPIC_API_KEY looks incorrect — expected it to start with "sk-ant-" but got a key starting with "${apiKey.slice(0, 6)}...". Check the secret value.`);
-    }
-    core.info(`PatternBuddy: Anthropic API key resolved: yes (length ${apiKey.length}, prefix ok)`);
-    const client = new sdk_1.default({ apiKey });
+    const client = (0, anthropicClient_1.createAnthropicClient)();
     const prompt = (0, prompt_template_1.buildPrompt)(context);
     const message = await client.messages.create({
         model: 'claude-sonnet-4-6',
@@ -40612,6 +41031,167 @@ async function postComments(context) {
 
 /***/ }),
 
+/***/ 5800:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.commitFile = commitFile;
+const core = __importStar(__nccwpck_require__(7484));
+const github = __importStar(__nccwpck_require__(3228));
+/**
+ * Creates or updates a single file on a branch via the GitHub Contents API.
+ *
+ * Looks up the existing blob SHA when the file is already present (required for
+ * updates) and omits it when the file is new, so the same call works for both
+ * the first commit and every commit after it.
+ */
+async function commitFile(opts) {
+    const octokit = github.getOctokit(core.getInput('github-token'));
+    const encoded = Buffer.from(opts.content).toString('base64');
+    let sha;
+    try {
+        const { data } = await octokit.rest.repos.getContent({
+            owner: opts.owner,
+            repo: opts.repo,
+            path: opts.path,
+            ref: opts.branch
+        });
+        sha = data.sha;
+    }
+    catch {
+        sha = undefined; // File doesn't exist on the branch yet — first commit.
+    }
+    await octokit.rest.repos.createOrUpdateFileContents({
+        owner: opts.owner,
+        repo: opts.repo,
+        path: opts.path,
+        message: opts.message,
+        content: encoded,
+        sha,
+        branch: opts.branch
+    });
+}
+
+
+/***/ }),
+
+/***/ 2973:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DEFAULT_CONFIG = void 0;
+exports.loadConfig = loadConfig;
+const core = __importStar(__nccwpck_require__(7484));
+const fs = __importStar(__nccwpck_require__(9896));
+const path = __importStar(__nccwpck_require__(6928));
+exports.DEFAULT_CONFIG = {
+    tone: 'mentor',
+    strictness: 'balanced',
+    architectureMap: {
+        enabled: false,
+        output: 'docs/architecture.md',
+        updateOn: 'merge'
+    }
+};
+function loadConfig() {
+    const configPath = path.join(process.cwd(), 'pattern-pointers.config.json');
+    if (!fs.existsSync(configPath)) {
+        core.info('PatternBuddy: No config file found. Using defaults (mentor / balanced).');
+        return exports.DEFAULT_CONFIG;
+    }
+    try {
+        const raw = fs.readFileSync(configPath, 'utf8');
+        const parsed = JSON.parse(raw);
+        const am = parsed.architecture_map ?? {};
+        return {
+            tone: parsed.tone ?? exports.DEFAULT_CONFIG.tone,
+            strictness: parsed.strictness ?? exports.DEFAULT_CONFIG.strictness,
+            architectureMap: {
+                enabled: am.enabled ?? exports.DEFAULT_CONFIG.architectureMap.enabled,
+                output: am.output ?? exports.DEFAULT_CONFIG.architectureMap.output,
+                updateOn: am.update_on ?? exports.DEFAULT_CONFIG.architectureMap.updateOn
+            }
+        };
+    }
+    catch {
+        core.warning('PatternBuddy: Config file is malformed. Using defaults.');
+        return exports.DEFAULT_CONFIG;
+    }
+}
+
+
+/***/ }),
+
 /***/ 1641:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -40674,6 +41254,40 @@ async function handleError(error) {
         core.error(`PatternBuddy: Also failed to post error comment: ${commentError}`);
     }
     core.setFailed(`PatternBuddy: ${message}`);
+}
+
+
+/***/ }),
+
+/***/ 9756:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.extractJson = extractJson;
+/**
+ * Pulls a JSON blob out of a raw LLM response.
+ *
+ * Handles three shapes, in order of preference:
+ *   1. A fenced ```json … ``` (or bare ``` … ```) block.
+ *   2. The first balanced-looking JSON value — object `{…}` or array `[…]`.
+ *   3. The trimmed input as-is (last resort; let the caller's JSON.parse fail loudly).
+ */
+function extractJson(raw) {
+    const trimmed = raw.trim();
+    const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (fenced)
+        return fenced[1].trim();
+    const firstObj = trimmed.indexOf('{');
+    const firstArr = trimmed.indexOf('[');
+    const starts = [firstObj, firstArr].filter(i => i !== -1);
+    if (starts.length === 0)
+        return trimmed;
+    const start = Math.min(...starts);
+    const close = trimmed[start] === '{' ? '}' : ']';
+    const end = trimmed.lastIndexOf(close);
+    return end > start ? trimmed.slice(start, end + 1) : trimmed;
 }
 
 
@@ -40851,6 +41465,7 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(7484));
+const github = __importStar(__nccwpck_require__(3228));
 const inputBuilder_1 = __nccwpck_require__(8496);
 const historyLoader_1 = __nccwpck_require__(164);
 const claudeCaller_1 = __nccwpck_require__(3022);
@@ -40858,22 +41473,61 @@ const outputBuilder_1 = __nccwpck_require__(4603);
 const commentPoster_1 = __nccwpck_require__(9267);
 const mdUpdater_1 = __nccwpck_require__(5417);
 const errorHandler_1 = __nccwpck_require__(1641);
+const architectureInput_1 = __nccwpck_require__(9994);
+const architectureMapper_1 = __nccwpck_require__(4857);
+const architectureCommitter_1 = __nccwpck_require__(3342);
+const architectureComment_1 = __nccwpck_require__(575);
+const config_1 = __nccwpck_require__(2973);
+/** Per-PR analysis: review the diff, post inline comments, update pattern memory. */
+async function runAnalysis() {
+    core.info('PatternBuddy: Starting analysis...');
+    const withInput = await (0, inputBuilder_1.buildInput)();
+    core.info('PatternBuddy: Input built.');
+    const withHistory = await (0, historyLoader_1.loadHistory)(withInput);
+    core.info('PatternBuddy: History loaded.');
+    const withAnalysis = await (0, claudeCaller_1.callClaude)(withHistory);
+    core.info(`PatternBuddy: Analysis complete. ${withAnalysis.analysis.findings.length} finding(s).`);
+    const withOutput = await (0, outputBuilder_1.buildOutput)(withAnalysis);
+    core.info('PatternBuddy: Output built.');
+    await (0, commentPoster_1.postComments)(withOutput);
+    core.info('PatternBuddy: Comments posted.');
+    await (0, mdUpdater_1.updateMD)(withOutput);
+    core.info('PatternBuddy: Pattern memory updated.');
+    core.info('PatternBuddy: Done. 🎉');
+}
+/** Post-merge pass: turn the accumulated pattern memory into a living architecture map. */
+async function runArchitecture() {
+    core.info('PatternBuddy: Starting architecture-map pass...');
+    // Gate on config before any API work so a disabled repo does nothing.
+    if (!(0, config_1.loadConfig)().architectureMap.enabled) {
+        core.info('PatternBuddy: Architecture map disabled in config. Skipping.');
+        return;
+    }
+    const input = await (0, architectureInput_1.buildArchitectureInput)();
+    const withMap = await (0, architectureMapper_1.generateArchitectureMap)(input);
+    core.info('PatternBuddy: Architecture map generated.');
+    await (0, architectureCommitter_1.commitArchitectureMap)(withMap);
+    await (0, architectureComment_1.postArchitectureComment)(withMap);
+    core.info('PatternBuddy: Architecture map updated. 🗺️');
+}
 async function run() {
     try {
-        core.info('PatternBuddy: Starting analysis...');
-        const withInput = await (0, inputBuilder_1.buildInput)();
-        core.info('PatternBuddy: Input built.');
-        const withHistory = await (0, historyLoader_1.loadHistory)(withInput);
-        core.info('PatternBuddy: History loaded.');
-        const withAnalysis = await (0, claudeCaller_1.callClaude)(withHistory);
-        core.info(`PatternBuddy: Analysis complete. ${withAnalysis.analysis.findings.length} finding(s).`);
-        const withOutput = await (0, outputBuilder_1.buildOutput)(withAnalysis);
-        core.info('PatternBuddy: Output built.');
-        await (0, commentPoster_1.postComments)(withOutput);
-        core.info('PatternBuddy: Comments posted.');
-        await (0, mdUpdater_1.updateMD)(withOutput);
-        core.info('PatternBuddy: Pattern memory updated.');
-        core.info('PatternBuddy: Done. 🎉');
+        const ctx = github.context;
+        const payload = ctx.payload;
+        const mode = core.getInput('mode');
+        const isClose = ctx.eventName === 'pull_request' && payload.action === 'closed';
+        const isMerge = isClose && payload.pull_request?.merged === true;
+        // A PR closed without merging leaves nothing to map or review.
+        if (isClose && !isMerge && mode !== 'architecture') {
+            core.info('PatternBuddy: PR closed without merging — nothing to do.');
+            return;
+        }
+        if (mode === 'architecture' || isMerge) {
+            await runArchitecture();
+        }
+        else {
+            await runAnalysis();
+        }
     }
     catch (error) {
         await (0, errorHandler_1.handleError)(error);
@@ -40926,31 +41580,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildInput = buildInput;
 const core = __importStar(__nccwpck_require__(7484));
 const github = __importStar(__nccwpck_require__(3228));
-const fs = __importStar(__nccwpck_require__(9896));
-const path = __importStar(__nccwpck_require__(6928));
-const DEFAULT_CONFIG = {
-    tone: 'mentor',
-    strictness: 'balanced'
-};
-function loadConfig() {
-    const configPath = path.join(process.cwd(), 'pattern-pointers.config.json');
-    if (!fs.existsSync(configPath)) {
-        core.info('PatternBuddy: No config file found. Using defaults (mentor / balanced).');
-        return DEFAULT_CONFIG;
-    }
-    try {
-        const raw = fs.readFileSync(configPath, 'utf8');
-        const parsed = JSON.parse(raw);
-        return {
-            tone: parsed.tone ?? DEFAULT_CONFIG.tone,
-            strictness: parsed.strictness ?? DEFAULT_CONFIG.strictness
-        };
-    }
-    catch {
-        core.warning('PatternBuddy: Config file is malformed. Using defaults.');
-        return DEFAULT_CONFIG;
-    }
-}
+const config_1 = __nccwpck_require__(2973);
 async function buildInput() {
     const octokit = github.getOctokit(core.getInput('github-token'));
     const ctx = github.context;
@@ -40984,7 +41614,7 @@ async function buildInput() {
         repoOwner: ctx.repo.owner,
         filesChanged: files.map(f => f.filename)
     };
-    const config = loadConfig();
+    const config = (0, config_1.loadConfig)();
     const input = {
         prMetadata,
         diffContent: diffData,
@@ -41045,6 +41675,7 @@ const core = __importStar(__nccwpck_require__(7484));
 const github = __importStar(__nccwpck_require__(3228));
 const fs = __importStar(__nccwpck_require__(9896));
 const path = __importStar(__nccwpck_require__(6928));
+const commitFile_1 = __nccwpck_require__(5800);
 const MD_PATH = path.join(process.cwd(), '.pattern-pointers.md');
 const SECTION_HEADERS = {
     'factory-patterns': '## Factory Patterns',
@@ -41080,33 +41711,19 @@ async function updateMD(context) {
         content = appendToSection(content, header, update.entry);
     }
     fs.writeFileSync(MD_PATH, content, 'utf8');
+    // Pattern memory belongs on the default branch (main), not on PR branches —
+    // observations accumulate there and are available to every future PR.
+    // The create-or-update SHA handling lives in commitFile (handles first-run).
     const octokit = github.getOctokit(core.getInput('github-token'));
-    const encoded = Buffer.from(content).toString('base64');
-    // Commit to the default branch — pattern memory belongs in main, not on PR branches
     const { data: repo } = await octokit.rest.repos.get({ owner: repoOwner, repo: repoName });
     const defaultBranch = repo.default_branch;
-    // Get current SHA if the file already exists; undefined means create new
-    let existingSha;
-    try {
-        const { data: existing } = await octokit.rest.repos.getContent({
-            owner: repoOwner,
-            repo: repoName,
-            path: '.pattern-pointers.md',
-            ref: defaultBranch
-        });
-        existingSha = existing.sha;
-    }
-    catch {
-        core.info('PatternBuddy: .pattern-pointers.md not found on default branch — creating it.');
-    }
-    await octokit.rest.repos.createOrUpdateFileContents({
+    await (0, commitFile_1.commitFile)({
         owner: repoOwner,
         repo: repoName,
+        branch: defaultBranch,
         path: '.pattern-pointers.md',
-        message: `chore: PatternBuddy updates pattern memory for PR #${prNumber}`,
-        content: encoded,
-        sha: existingSha,
-        branch: defaultBranch
+        content,
+        message: `chore: PatternBuddy updates pattern memory for PR #${prNumber}`
     });
     core.info(`PatternBuddy: Committed ${mdUpdates.length} update(s) to .pattern-pointers.md on ${defaultBranch}`);
     return context;
