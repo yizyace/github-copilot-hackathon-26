@@ -17,11 +17,17 @@ const SECTION_HEADERS: Record<string, string> = {
   'other':              '## Other'
 };
 
-function appendToSection(content: string, sectionHeader: string, entry: string): string {
+export function appendToSection(content: string, sectionHeader: string, entry: string): string {
   const idx = content.indexOf(sectionHeader);
   if (idx === -1) return content + `\n${sectionHeader}\n${entry}\n`;
 
-  const afterHeader  = content.indexOf('\n', idx) + 1;
+  // When the header is the final line with no trailing newline, indexOf returns
+  // -1. Start a new line for the entry instead of searching from index 0 (which
+  // would match an *earlier* section header and insert into the wrong section).
+  const nlIdx = content.indexOf('\n', idx);
+  if (nlIdx === -1) return content + `\n${entry}\n`;
+
+  const afterHeader  = nlIdx + 1;
   const nextHeader   = content.indexOf('\n## ', afterHeader);
   const insertPoint  = nextHeader === -1 ? content.length : nextHeader;
 
@@ -32,7 +38,7 @@ function appendToSection(content: string, sectionHeader: string, entry: string):
 // run-to-run observation wording. Matches the prefix emitted by
 // outputBuilder.buildMDEntry(); the trailing en-dash after lineStart stops
 // "4" from matching "42".
-function entrySignature(update: MDUpdate): string {
+export function entrySignature(update: MDUpdate): string {
   return `**${update.patternName}** in \`${update.filePath}\` (lines ${update.lineStart}–`;
 }
 
