@@ -1,0 +1,8 @@
+{
+  "name": "api",
+  "version": "1.0.0",
+  "description": "Soul Review managed Functions for Azure Static Web Apps",
+  "engines": {
+    "node": ">=18"
+  }
+}
