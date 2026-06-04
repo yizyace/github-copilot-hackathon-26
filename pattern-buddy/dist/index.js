@@ -40442,10 +40442,23 @@ function validateFinding(obj) {
         typeof f.mdSection === 'string' &&
         typeof f.isRecurring === 'boolean');
 }
+function extractJSON(raw) {
+    const trimmed = raw.trim();
+    // Try extracting from ```json ... ``` or ``` ... ``` fences
+    const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (fenced)
+        return fenced[1].trim();
+    // Try extracting a bare JSON array
+    const arrayStart = trimmed.indexOf('[');
+    const arrayEnd = trimmed.lastIndexOf(']');
+    if (arrayStart !== -1 && arrayEnd > arrayStart)
+        return trimmed.slice(arrayStart, arrayEnd + 1);
+    return trimmed;
+}
 function parseFindings(raw) {
     let parsed;
     try {
-        parsed = JSON.parse(raw.trim());
+        parsed = JSON.parse(extractJSON(raw));
     }
     catch {
         core.error(`PatternBuddy: Claude returned unparseable JSON.\nRaw response:\n${raw}`);
