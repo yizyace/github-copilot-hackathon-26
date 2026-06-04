@@ -1,0 +1,44 @@
+name: PatternBuddy Mention
+
+# When someone comments "@patternbuddy <instruction>" on a PR, translate the
+# instruction into a config/skill change, commit it to the default branch via the
+# GitHub API, and reply on the PR thread. No backend — the Action does it all.
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+# One run per comment; don't cancel an in-flight apply for the same comment.
+concurrency:
+  group: pb-mention-${{ github.event.comment.id }}
+  cancel-in-progress: false
+
+jobs:
+  mention:
+    # Loop guard (ignore the bot's own comments) + require the trigger + require a
+    # PR (issue_comment also fires on plain issues; issue.pull_request scopes to PRs).
+    if: >
+      github.event.comment.user.type != 'Bot' &&
+      contains(github.event.comment.body, '@patternbuddy') &&
+      (github.event.issue.pull_request != null || github.event_name == 'pull_request_review_comment')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # The Action reads the comment straight from the event payload, so the body
+      # is never interpolated into a shell command (no script-injection surface).
+      - name: Handle mention
+        uses: ./pattern-buddy
+        with:
+          mode: mention
+          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
