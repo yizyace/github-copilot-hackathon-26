@@ -40579,7 +40579,8 @@ async function postComments(context) {
                 path: mapped.path,
                 line: mapped.line,
                 side: 'RIGHT',
-                body: `_(re: \`${c.filePath}\` line ${mapped.originalLine})_\n\n${c.body}`
+                body: c.body,
+                reLine: mapped.originalLine
             });
         }
         else {
@@ -40590,6 +40591,15 @@ async function postComments(context) {
     if (rolled.length > 0) {
         body += `\n\n---\n\n### Notes on lines outside this diff\n\n${rolled.join('\n\n')}`;
     }
+    // Inline comments snapped to a nearby line carry a "re: line N" note so the
+    // reader knows the real location.
+    const apiComments = reviewComments.map(rc => ({
+        path: rc.path,
+        line: rc.line,
+        side: rc.side,
+        ...(rc.start_line ? { start_line: rc.start_line, start_side: rc.start_side } : {}),
+        body: rc.reLine ? `_(re: \`${rc.path}\` line ${rc.reLine})_\n\n${rc.body}` : rc.body
+    }));
     const { data: pr } = await octokit.rest.pulls.get({
         owner: repoOwner, repo: repoName, pull_number: prNumber
     });
@@ -40604,9 +40614,9 @@ async function postComments(context) {
             commit_id: commitId,
             event: 'COMMENT',
             body,
-            comments: reviewComments
+            comments: apiComments
         });
-        core.info(`PatternBuddy: Posted review with ${reviewComments.length} inline comment(s).`);
+        core.info(`PatternBuddy: Posted review with ${apiComments.length} inline comment(s).`);
         return context;
     }
     catch (err) {
@@ -40614,7 +40624,10 @@ async function postComments(context) {
     }
     // Retry once with no inline comments: fold them into the body so nothing is lost.
     const folded = reviewComments
-        .map(rc => `- \`${rc.path}:${rc.line}\`: ${rc.body}`)
+        .map(rc => {
+        const re = rc.reLine ? ` (re: line ${rc.reLine})` : '';
+        return `- \`${rc.path}:${rc.line}\`${re}: ${rc.body}`;
+    })
         .join('\n\n');
     const retryBody = reviewComments.length > 0
         ? `${body}\n\n---\n\n### Inline notes\n\n${folded}`
@@ -41289,6 +41302,8 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.appendToSection = appendToSection;
+exports.entrySignature = entrySignature;
 exports.updateMD = updateMD;
 const core = __importStar(__nccwpck_require__(7484));
 const github = __importStar(__nccwpck_require__(3228));
@@ -41309,7 +41324,13 @@ function appendToSection(content, sectionHeader, entry) {
     const idx = content.indexOf(sectionHeader);
     if (idx === -1)
         return content + `\n${sectionHeader}\n${entry}\n`;
-    const afterHeader = content.indexOf('\n', idx) + 1;
+    // When the header is the final line with no trailing newline, indexOf returns
+    // -1. Start a new line for the entry instead of searching from index 0 (which
+    // would match an *earlier* section header and insert into the wrong section).
+    const nlIdx = content.indexOf('\n', idx);
+    if (nlIdx === -1)
+        return content + `\n${entry}\n`;
+    const afterHeader = nlIdx + 1;
     const nextHeader = content.indexOf('\n## ', afterHeader);
     const insertPoint = nextHeader === -1 ? content.length : nextHeader;
     return content.slice(0, insertPoint) + entry + '\n' + content.slice(insertPoint);
