@@ -27,7 +27,8 @@ function context(findings: Finding[], config: BuddyConfig): AnalysisContext {
       },
       diffContent: '',
       config,
-      history: ''
+      history: '',
+      skills: []
     },
     analysis: { findings },
     output:   { comments: [], mdUpdates: [], summary: '' }

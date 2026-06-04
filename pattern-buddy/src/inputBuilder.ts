@@ -3,6 +3,9 @@ import * as github from '@actions/github';
 import * as fs     from 'fs';
 import * as path   from 'path';
 import { AnalysisContext, InputPayload, PRMetadata, BuddyConfig } from './types';
+import { loadSkills, selectEnabled } from './skillLoader';
+
+const SKILLS_DIR = path.join(process.cwd(), 'pattern-buddy', 'skills');
 
 const DEFAULT_CONFIG: BuddyConfig = {
   tone:       'mentor',
@@ -69,11 +72,15 @@ export async function buildInput(): Promise<AnalysisContext> {
 
   const config = loadConfig();
 
+  const skills = selectEnabled(loadSkills(SKILLS_DIR));
+  core.info(`PatternBuddy: Loaded ${skills.length} enabled skill playbook(s).`);
+
   const input: InputPayload = {
     prMetadata,
     diffContent: diffData,
     config,
-    history:     ''   // Populated by historyLoader
+    history:     '',  // Populated by historyLoader
+    skills
   };
 
   return {

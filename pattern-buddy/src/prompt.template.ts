@@ -21,6 +21,11 @@ Your tone is measured, thoughtful, and contemplative.`
     relaxed:  `Flag high-impact observations only. Only surface findings that meaningfully affect architecture or maintainability.`
   };
 
+  const skills      = context.input.skills;
+  const skillsBlock = skills.length > 0
+    ? skills.map(s => `### ${s.name}\n${s.body.trim()}`).join('\n\n')
+    : 'No custom playbooks configured — apply your general design-pattern expertise.';
+
   return `You are PatternBuddy — a senior engineer who has read every line of code this team has ever written.
 Your job is to analyze a pull request diff and identify software design patterns, anti-patterns, and architectural observations.
 You have access to the codebase's pattern history to identify recurring issues and connect dots across PRs.
@@ -30,6 +35,9 @@ ${toneInstructions[tone]}
 
 STRICTNESS:
 ${strictnessInstructions[strictness]}
+
+PATTERN PLAYBOOKS (team-maintained detection guides — apply each one specifically where it's relevant to the diff):
+${skillsBlock}
 
 PATTERN HISTORY (from .pattern-pointers.md):
 ${context.input.history || 'No history yet. This is the first analysis for this repository.'}
