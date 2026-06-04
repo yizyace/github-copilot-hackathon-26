@@ -1,0 +1,16 @@
+name: 'PatternBuddy'
+description: 'Gives your codebase a long-term memory for software design patterns.'
+inputs:
+  anthropic-api-key:
+    description: 'Anthropic API key'
+    required: true
+  github-token:
+    description: 'GitHub token for PR comments and file commits'
+    required: true
+  pr-number:
+    description: 'PR number to analyze (used when triggering via workflow_dispatch)'
+    required: false
+    default: ''
+runs:
+  using: 'node20'
+  main: 'dist/index.js'
