@@ -26,6 +26,16 @@ describe('safeSlug', () => {
   });
 });
 
+describe('parseApplyChange suppress_finding', () => {
+  it('parses a suppress_finding with pattern, file, and line', () => {
+    const c = parseApplyChange('{"action":"suppress_finding","pattern_name":"Tight Coupling","file_path":"src/foo.ts","line":12,"human_summary":"ok"}');
+    expect(c?.action).toBe('suppress_finding');
+    expect(c?.pattern_name).toBe('Tight Coupling');
+    expect(c?.file_path).toBe('src/foo.ts');
+    expect(c?.line).toBe(12);
+  });
+});
+
 describe('stripTrigger', () => {
   it('removes the trigger and collapses whitespace', () => {
     expect(stripTrigger('@patternbuddy be stricter')).toBe('be stricter');

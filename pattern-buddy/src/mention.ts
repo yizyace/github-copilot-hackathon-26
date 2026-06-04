@@ -21,10 +21,12 @@
 import * as core   from '@actions/core';
 import * as github from '@actions/github';
 import { createClient, ANTHROPIC_MODEL, extractJSONObject } from './anthropicClient';
+import { addSuppression } from './suppressions';
 
 const TRIGGER = '@patternbuddy';
 const CONFIG_PATH = 'pattern-pointers.config.json';
 const SKILLS_DIR  = 'pattern-buddy/skills';
+const MEMORY_PATH = '.pattern-pointers.md';
 
 /** Slugs of the playbooks that ship with the action — given to Claude so it can
  *  map "stop flagging factory patterns" → disable_skill factory-singleton. */
@@ -54,6 +56,7 @@ const APPLY_ACTIONS = [
   'enable_skill',
   'disable_skill',
   'create_skill',
+  'suppress_finding',
   'none',
 ] as const;
 
@@ -67,6 +70,9 @@ export interface ApplyChange {
   skill_name?:    string;
   skill_category?: string;
   rule_markdown?: string;
+  pattern_name?:  string;
+  file_path?:     string;
+  line?:          number;
   human_summary:  string;
 }
 
@@ -156,6 +162,9 @@ export function parseApplyChange(raw: string): ApplyChange | null {
   if (typeof obj.skill_name === 'string')     out.skill_name = obj.skill_name;
   if (typeof obj.skill_category === 'string') out.skill_category = obj.skill_category;
   if (typeof obj.rule_markdown === 'string')  out.rule_markdown = obj.rule_markdown;
+  if (typeof obj.pattern_name === 'string')   out.pattern_name = obj.pattern_name;
+  if (typeof obj.file_path === 'string')      out.file_path = obj.file_path;
+  if (typeof obj.line === 'number')           out.line = obj.line;
   return out;
 }
 
@@ -168,13 +177,16 @@ export function buildMentionPrompt(instruction: string): string {
     '',
     'Reply with ONLY a single JSON object (no prose, no code fences) of this shape:',
     '{',
-    '  "action": "set_tone" | "set_strictness" | "enable_skill" | "disable_skill" | "create_skill" | "none",',
+    '  "action": "set_tone" | "set_strictness" | "enable_skill" | "disable_skill" | "create_skill" | "suppress_finding" | "none",',
     `  "tone": ${TONES.map(t => `"${t}"`).join(' | ')},                 // only for set_tone`,
     `  "strictness": ${STRICTNESSES.map(s => `"${s}"`).join(' | ')},    // only for set_strictness`,
     '  "skill_slug": "<one of the known slugs>",       // for enable_skill/disable_skill/create_skill',
     '  "skill_name": "<human name>",                   // for create_skill',
     `  "skill_category": ${CATEGORIES.map(c => `"${c}"`).join(' | ')},  // for create_skill`,
     '  "rule_markdown": "<markdown body>",             // for create_skill',
+    '  "pattern_name": "<the finding/pattern name to stop flagging>", // for suppress_finding',
+    '  "file_path": "<file the finding is in>",        // for suppress_finding',
+    '  "line": <line number>,                          // optional, for suppress_finding',
     '  "human_summary": "<one short sentence confirming what you changed, in the first person>"',
     '}',
     '',
@@ -186,6 +198,7 @@ export function buildMentionPrompt(instruction: string): string {
     '- "stop flagging factory patterns"/"ignore singletons" → disable_skill factory-singleton.',
     '- "focus on coupling"/"care about coupling more" → enable_skill coupling.',
     '- "stop checking circular deps" → disable_skill circular-deps.',
+    '- "ignore <pattern> in <file>", "that\'s a false positive", "stop flagging <pattern> at <file>:<line>" → suppress_finding with pattern_name + file_path (and line if a specific line is named). Use this (not disable_skill) whenever a specific FILE is named — disable_skill turns a whole playbook off everywhere.',
     '- Map the instruction to the closest known slug. Only use create_skill when the instruction',
     '  describes a genuinely new rule not covered by a known slug; invent a short kebab-case slug.',
     '- If you cannot confidently interpret the instruction, use action "none" and explain why in human_summary.',
@@ -329,6 +342,23 @@ async function dispatch(
         body:     change.rule_markdown,
       });
       await commitFile(octokit, ref, path, body, commitMsg, branch, existing.sha);
+      return change.human_summary;
+    }
+
+    case 'suppress_finding': {
+      if (!change.pattern_name || !change.file_path) {
+        throw new DispatchError("I couldn't tell which finding to suppress — I need a pattern name and a file, so nothing changed.");
+      }
+      const file = await readFile(octokit, ref, MEMORY_PATH, branch);
+      const updated = addSuppression(file.content, {
+        patternName: change.pattern_name,
+        filePath:    change.file_path,
+        ...(typeof change.line === 'number' ? { lineStart: change.line } : {}),
+      });
+      if (updated === file.content) {
+        return change.human_summary;  // already suppressed — nothing to commit
+      }
+      await commitFile(octokit, ref, MEMORY_PATH, updated, commitMsg, branch, file.sha);
       return change.human_summary;
     }
 
