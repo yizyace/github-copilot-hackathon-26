@@ -1,0 +1,97 @@
+/*
+ * Soul Review — shared design tokens: "Ink, Ember & Spectral Memory".
+ *
+ * Scoped under .theme-soul so the bold dark surfaces (landing + editor) get
+ * these tokens while the existing adaptive theme on /about and /docs (defined
+ * in index.css) stays untouched. Both the landing and the editor wrap their
+ * root in <div className="theme-soul">.
+ */
+
+.theme-soul {
+  /* Surfaces — deep ink, lifted panels */
+  --sr-ink: #0b0d12;
+  --sr-ink-2: #0e1118;
+  --sr-panel: #15171f;
+  --sr-panel-2: #1b1e29;
+  --sr-line: #262a33;
+  --sr-line-soft: rgba(236, 230, 218, 0.09);
+  /* Stronger boundary for interactive controls (≥3:1 vs the dark fill). */
+  --sr-line-strong: #6b7180;
+
+  /* Text — warm parchment, not cold white */
+  --sr-text: #ece6da;
+  --sr-text-muted: #9a958a;
+  --sr-text-faint: #8f8a80;
+
+  /* Accents — ember = soul/identity, spectral = memory/citations */
+  --sr-ember: #f2b250;
+  --sr-ember-strong: #f7c777;
+  --sr-ember-soft: rgba(242, 178, 80, 0.14);
+  --sr-spectral: #5fe3ce;
+  --sr-spectral-soft: rgba(95, 227, 206, 0.13);
+  --sr-danger: #ee6b6e;
+  --sr-danger-soft: rgba(238, 107, 110, 0.15);
+  --sr-ok: #7bd88f;
+
+  /* Type */
+  --sr-font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --sr-font-body: 'Hanken Grotesk', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --sr-font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Consolas, monospace;
+
+  /* Shape + depth */
+  --sr-radius: 14px;
+  --sr-radius-sm: 9px;
+  --sr-radius-lg: 22px;
+  --sr-shadow: 0 24px 60px -22px rgba(0, 0, 0, 0.72);
+  --sr-shadow-card: 0 18px 48px -24px rgba(0, 0, 0, 0.78);
+  --sr-maxw: 1100px;
+
+  color: var(--sr-text);
+  background-color: var(--sr-ink);
+  font-family: var(--sr-font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.theme-soul ::selection {
+  background: var(--sr-ember-soft);
+  color: var(--sr-ember-strong);
+}
+
+/* Only style "plain" links; buttons and labelled links keep their own colors. */
+.theme-soul a:not([class]) {
+  color: var(--sr-spectral);
+}
+
+/* Visible, on-brand keyboard focus across both surfaces. */
+.theme-soul :focus-visible {
+  outline: 2px solid var(--sr-spectral);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Skip link — first focusable element, slides in on focus. */
+.theme-soul .sr-skip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 100;
+  transform: translateY(-130%);
+  margin: 0.5rem;
+  padding: 0.6em 1em;
+  background: var(--sr-ember);
+  color: #20160a;
+  font-weight: 600;
+  border-radius: var(--sr-radius-sm);
+  text-decoration: none;
+  transition: transform 0.15s ease;
+}
+.theme-soul .sr-skip:focus {
+  transform: none;
+}
+
+.theme-soul code,
+.theme-soul kbd {
+  font-family: var(--sr-font-mono);
+  font-size: 0.88em;
+}

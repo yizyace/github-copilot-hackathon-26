@@ -41713,6 +41713,7 @@ async function updateMD(context) {
     fs.writeFileSync(MD_PATH, content, 'utf8');
     // Pattern memory belongs on the default branch (main), not on PR branches —
     // observations accumulate there and are available to every future PR.
+    // The create-or-update SHA handling lives in commitFile (handles first-run).
     const octokit = github.getOctokit(core.getInput('github-token'));
     const { data: repo } = await octokit.rest.repos.get({ owner: repoOwner, repo: repoName });
     const defaultBranch = repo.default_branch;

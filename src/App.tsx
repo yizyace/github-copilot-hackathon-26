@@ -1,30 +1,44 @@
-import { NavLink, Route, Routes } from 'react-router-dom'
+import { useEffect, useRef } from 'react'
+import { Route, Routes, useLocation } from 'react-router-dom'
 import Home from './pages/Home'
+import Editor from './pages/Editor'
 import About from './pages/About'
 import Docs from './pages/Docs'
 import NotFound from './pages/NotFound'
-import './App.css'
+import { ChromeLayout } from './components/ChromeLayout'
+
+// On client-side navigation, move focus to the new page's main region so
+// screen-reader and keyboard users aren't left on an unmounted link.
+function RouteFocus() {
+  const { pathname } = useLocation()
+  const firstRender = useRef(true)
+  useEffect(() => {
+    if (firstRender.current) {
+      firstRender.current = false
+      return
+    }
+    document.getElementById('main-content')?.focus()
+  }, [pathname])
+  return null
+}
 
 function App() {
   return (
-    <div className="layout">
-      <nav className="nav">
-        <NavLink to="/" end>
-          Home
-        </NavLink>
-        <NavLink to="/about">About</NavLink>
-        <NavLink to="/docs">Docs</NavLink>
-      </nav>
+    <>
+      <RouteFocus />
+      <Routes>
+      {/* Full-bleed surfaces — their own layout, no shared chrome. */}
+      <Route path="/" element={<Home />} />
+      <Route path="/editor" element={<Editor />} />
 
-      <main className="content">
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/docs" element={<Docs />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </main>
-    </div>
+      {/* Secondary pages share the minimal nav + centered column. */}
+      <Route element={<ChromeLayout />}>
+        <Route path="/about" element={<About />} />
+        <Route path="/docs" element={<Docs />} />
+        <Route path="*" element={<NotFound />} />
+      </Route>
+      </Routes>
+    </>
   )
 }
 

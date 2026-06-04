@@ -3,7 +3,8 @@ import react from '@vitejs/plugin-react'
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: '/github-copilot-hackathon-26/',
+  // Azure Static Web Apps serves from the domain root.
+  base: '/',
   plugins: [react()],
   test: {
     globals: true,

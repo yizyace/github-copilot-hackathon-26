@@ -1,0 +1,316 @@
+/* Shared UI primitives — styled with the .theme-soul tokens. */
+
+/* ---- Button ---- */
+.sr-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+  padding: 0.72em 1.15em;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-family: var(--sr-font-body);
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    transform 0.16s ease,
+    background 0.16s ease,
+    border-color 0.16s ease,
+    color 0.16s ease;
+}
+.sr-btn:hover {
+  transform: translateY(-1px);
+}
+.sr-btn--primary {
+  background: var(--sr-ember);
+  color: #20160a;
+  border-color: var(--sr-ember);
+}
+.sr-btn--primary:hover {
+  background: var(--sr-ember-strong);
+}
+.sr-btn--spectral {
+  background: var(--sr-spectral);
+  color: #06201b;
+  border-color: var(--sr-spectral);
+}
+.sr-btn--ghost {
+  background: transparent;
+  color: var(--sr-text);
+  border-color: var(--sr-line);
+}
+.sr-btn--ghost:hover {
+  border-color: var(--sr-ember);
+  color: var(--sr-ember);
+}
+
+/* ---- Card ---- */
+.sr-card {
+  background: var(--sr-panel);
+  border: 1px solid var(--sr-line);
+  border-radius: var(--sr-radius);
+  padding: 1.5rem;
+  box-shadow: var(--sr-shadow-card);
+}
+
+/* ---- Chip ---- */
+.sr-chip {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--sr-font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 0.2em 0.55em;
+  border-radius: var(--sr-radius-sm);
+  border: 1px solid var(--sr-line);
+  color: var(--sr-text-muted);
+}
+.sr-chip--ember {
+  color: var(--sr-ember);
+  background: var(--sr-ember-soft);
+  border-color: transparent;
+}
+.sr-chip--spectral {
+  color: var(--sr-spectral);
+  background: var(--sr-spectral-soft);
+  border-color: transparent;
+}
+
+/* ---- Severity badge ---- */
+.sr-sev {
+  font-family: var(--sr-font-mono);
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  padding: 0.18em 0.5em;
+  border-radius: var(--sr-radius-sm);
+  border: 1px solid transparent;
+}
+.sr-sev--blocking {
+  color: var(--sr-danger);
+  background: var(--sr-danger-soft);
+}
+.sr-sev--soft {
+  color: var(--sr-text-muted);
+  border-color: var(--sr-line);
+}
+
+/* ---- Citation chip (the wow) ---- */
+.sr-cite {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  padding: 0.28em 0.6em;
+  border-radius: 999px;
+  color: var(--sr-spectral);
+  background: var(--sr-spectral-soft);
+  border: 1px solid color-mix(in oklab, var(--sr-spectral) 45%, transparent);
+  box-shadow: 0 0 0 0 color-mix(in oklab, var(--sr-spectral) 50%, transparent);
+  font-size: 0.8rem;
+}
+.sr-cite__glyph {
+  color: var(--sr-spectral);
+  font-size: 0.7em;
+}
+.sr-cite__label code {
+  color: var(--sr-spectral);
+  background: transparent;
+  font-size: 0.92em;
+}
+
+/* ---- Review card (centerpiece) ---- */
+.sr-review {
+  background: linear-gradient(180deg, var(--sr-panel-2), var(--sr-panel));
+  border: 1px solid var(--sr-line);
+  border-radius: var(--sr-radius-lg);
+  box-shadow: var(--sr-shadow);
+  overflow: hidden;
+  text-align: left;
+}
+.sr-review__head {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--sr-line);
+}
+.sr-review__avatar {
+  display: grid;
+  place-items: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 50%;
+  background: var(--sr-ember-soft);
+  font-size: 1.25rem;
+}
+.sr-review__who {
+  display: flex;
+  flex-direction: column;
+  margin-right: auto;
+  min-width: 0;
+}
+.sr-review__name {
+  font-family: var(--sr-font-display);
+  font-weight: 600;
+  font-size: 1.05rem;
+}
+.sr-review__meta {
+  font-size: 0.78rem;
+  color: var(--sr-text-muted);
+}
+.sr-review__meta code {
+  color: var(--sr-text-muted);
+  background: transparent;
+}
+.sr-verdict {
+  font-family: var(--sr-font-mono);
+  font-size: 0.72rem;
+  font-weight: 500;
+  padding: 0.3em 0.6em;
+  border-radius: var(--sr-radius-sm);
+  white-space: nowrap;
+}
+.sr-verdict--request_changes {
+  color: var(--sr-danger);
+  background: var(--sr-danger-soft);
+}
+.sr-verdict--approve {
+  color: var(--sr-ok);
+  background: color-mix(in oklab, var(--sr-ok) 16%, transparent);
+}
+.sr-verdict--comment {
+  color: var(--sr-text-muted);
+  border: 1px solid var(--sr-line);
+}
+.sr-review__summary {
+  margin: 0;
+  padding: 1rem 1.25rem;
+  color: var(--sr-text);
+  line-height: 1.55;
+}
+.sr-review__summary code {
+  color: var(--sr-ember);
+  background: var(--sr-ember-soft);
+}
+
+.sr-comment {
+  border-top: 1px solid var(--sr-line);
+  padding: 1rem 1.25rem;
+}
+.sr-comment__loc {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.6rem;
+}
+.sr-comment__file {
+  color: var(--sr-text-muted);
+  background: transparent;
+  font-size: 0.82rem;
+}
+.sr-comment__tag {
+  font-family: var(--sr-font-mono);
+  font-size: 0.72rem;
+  color: var(--sr-ember);
+}
+.sr-comment__code {
+  margin: 0 0 0.7rem;
+  padding: 0.7rem 0.9rem;
+  background: var(--sr-ink-2);
+  border: 1px solid var(--sr-line);
+  border-left: 3px solid var(--sr-danger);
+  border-radius: var(--sr-radius-sm);
+  overflow-x: auto;
+}
+.sr-comment__code code {
+  font-size: 0.85rem;
+  color: var(--sr-text);
+  background: transparent;
+}
+.sr-comment__body {
+  margin: 0 0 0.7rem;
+  line-height: 1.55;
+  color: var(--sr-text);
+}
+.sr-comment__body code {
+  color: var(--sr-spectral);
+  background: var(--sr-spectral-soft);
+}
+.sr-comment__cites {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* ---- Lens card (harness view) ---- */
+.sr-lens {
+  background: var(--sr-panel);
+  border: 1px solid var(--sr-line);
+  border-radius: var(--sr-radius);
+  padding: 1rem;
+}
+.sr-lens__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+.sr-lens__title {
+  font-family: var(--sr-font-display);
+  font-weight: 600;
+}
+.sr-lens__count {
+  font-family: var(--sr-font-mono);
+  font-size: 0.72rem;
+  color: var(--sr-text-muted);
+}
+.sr-lens__mem {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.sr-mem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--sr-line);
+  border-radius: var(--sr-radius-sm);
+  background: var(--sr-ink-2);
+}
+.sr-mem--top {
+  border-color: color-mix(in oklab, var(--sr-spectral) 55%, transparent);
+  background: var(--sr-spectral-soft);
+}
+.sr-mem__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.sr-mem__id {
+  font-size: 0.74rem;
+  color: var(--sr-spectral);
+  background: transparent;
+  word-break: break-all;
+}
+.sr-mem__score {
+  font-family: var(--sr-font-mono);
+  font-size: 0.72rem;
+  color: var(--sr-text-muted);
+}
+.sr-mem__summary {
+  font-size: 0.82rem;
+  color: var(--sr-text-muted);
+  line-height: 1.45;
+}
+.sr-mem .sr-chip {
+  align-self: flex-start;
+}
