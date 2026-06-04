@@ -1,12 +1,12 @@
 // Site-wide constants. Kept in one place so the landing and editor stay in
-// sync and the (still-unknown) production URL is a single edit later.
+// sync and the production URL is a single edit.
 
 export const siteConfig = {
   hackathon: 'GitHub Copilot Hackathon 2026',
   product: 'Soul Review',
   tagline: 'A code reviewer with a soul — and a memory.',
   repoUrl: 'https://github.com/yizyace/github-copilot-hackathon-26',
-  siteUrl: 'https://green-sea-012dd340f.7.azurestaticapps.net',
+  siteUrl: 'https://pattern-buddy.com',
 } as const
 
 export interface TeamMember {
