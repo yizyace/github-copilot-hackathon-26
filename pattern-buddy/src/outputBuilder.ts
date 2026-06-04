@@ -45,8 +45,11 @@ export async function buildOutput(context: AnalysisContext): Promise<AnalysisCon
   }));
 
   const mdUpdates: MDUpdate[] = findings.map(finding => ({
-    category: finding.category,
-    entry:    buildMDEntry(finding, prNumber)
+    category:    finding.category,
+    entry:       buildMDEntry(finding, prNumber),
+    patternName: finding.patternName,
+    filePath:    finding.filePath,
+    lineStart:   finding.lineStart
   }));
 
   const output: OutputPayload = { comments, mdUpdates };

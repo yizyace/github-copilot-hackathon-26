@@ -56,8 +56,13 @@ export interface CommentDraft {
 }
 
 export interface MDUpdate {
-  readonly category: PatternCategory;
-  readonly entry:    string;
+  readonly category:    PatternCategory;
+  readonly entry:       string;
+  // Stable identity of the finding, used to dedupe memory entries across runs
+  // (independent of PR number and of Claude's run-to-run observation wording).
+  readonly patternName: string;
+  readonly filePath:    string;
+  readonly lineStart:   number;
 }
 
 export interface OutputPayload {
