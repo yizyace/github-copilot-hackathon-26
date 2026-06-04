@@ -27,56 +27,6 @@ const COLD_START_TEMPLATE = `# PatternBuddy — Pattern Memory
 ## Other
 `;
 
-const SECTION_KEYWORDS: Record<string, string[]> = {
-  'factory-patterns':   ['factory', 'create', 'builder', 'instantiat'],
-  'singleton-patterns': ['singleton', 'instance', 'static'],
-  'coupling-issues':    ['import', 'require', 'depend', 'inject', 'coupled'],
-  'solid-violations':   ['solid', 'single', 'responsibility', 'open', 'closed', 'liskov', 'interface', 'dependency'],
-  'dry-violations':     ['duplicate', 'repeat', 'copy', 'dry'],
-  'observer-patterns':  ['event', 'listener', 'subscribe', 'observer', 'emit'],
-  'best-practices':     ['best', 'practice', 'pattern', 'principle'],
-  'other':              []
-};
-
-function extractSections(content: string, relevantSections: string[]): string {
-  const lines    = content.split('\n');
-  const result:  string[] = [];
-  let   current: string | null = null;
-  let   capture  = false;
-
-  for (const line of lines) {
-    const headingMatch = line.match(/^## (.+)$/);
-    if (headingMatch) {
-      const sectionSlug = headingMatch[1].toLowerCase().replace(/\s+/g, '-');
-      current = sectionSlug;
-      capture = relevantSections.includes(sectionSlug);
-      if (capture) result.push(line);
-    } else if (capture && current) {
-      result.push(line);
-    }
-  }
-
-  return result.join('\n').trim();
-}
-
-function getRelevantSections(filesChanged: string[]): string[] {
-  const relevant = new Set<string>();
-  const allFiles = filesChanged.join(' ').toLowerCase();
-
-  for (const [section, keywords] of Object.entries(SECTION_KEYWORDS)) {
-    if (section === 'other') continue;
-    if (keywords.some(kw => allFiles.includes(kw))) {
-      relevant.add(section);
-    }
-  }
-
-  // Always include coupling-issues and solid-violations — universally relevant
-  relevant.add('coupling-issues');
-  relevant.add('solid-violations');
-
-  return Array.from(relevant);
-}
-
 export async function loadHistory(context: AnalysisContext): Promise<AnalysisContext> {
   if (!fs.existsSync(MD_PATH)) {
     core.info('PatternBuddy: No .pattern-pointers.md found. Creating from template.');
@@ -87,11 +37,18 @@ export async function loadHistory(context: AnalysisContext): Promise<AnalysisCon
     };
   }
 
-  const content          = fs.readFileSync(MD_PATH, 'utf8');
-  const relevantSections = getRelevantSections(context.input.prMetadata.filesChanged);
-  const history          = extractSections(content, relevantSections);
+  // The memory file is small, so load it whole. The previous keyword-on-filepath
+  // selection almost always collapsed to just coupling + SOLID, starving the
+  // model of relevant prior patterns. Only pass history once there's a real
+  // entry (a "- " bullet); a bare template stays empty so the prompt's
+  // "no history yet" path still kicks in on fresh repos.
+  const content    = fs.readFileSync(MD_PATH, 'utf8');
+  const hasEntries = /^\s*-\s+/m.test(content);
+  const history    = hasEntries ? content.trim() : '';
 
-  core.info(`PatternBuddy: Loaded history sections: ${relevantSections.join(', ')}`);
+  core.info(hasEntries
+    ? 'PatternBuddy: Loaded full pattern history.'
+    : 'PatternBuddy: Pattern memory has no entries yet.');
 
   return {
     ...context,
