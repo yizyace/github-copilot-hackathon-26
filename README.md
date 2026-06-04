@@ -4,7 +4,9 @@
 
 > _A code reviewer with a soul — and a memory._
 
-🌐 **Live site:** **https://green-sea-012dd340f.7.azurestaticapps.net/** — live on Azure Static Web Apps ✅
+🌐 **Live site:** **https://pattern-buddy.com** ✅ — also reachable at **https://www.pattern-buddy.com**
+
+> _Backup:_ the Azure Static Web Apps default hostname **https://green-sea-012dd340f.7.azurestaticapps.net/** stays live as a fallback.
 
 Status: **🚧 Hackathon WIP** — the site/pitch deck is live; the review engine is in progress.
 
@@ -12,7 +14,7 @@ Status: **🚧 Hackathon WIP** — the site/pitch deck is live; the review engin
 
 _TBD — see the **[ELI5](./docs/eli5.md)** for the simple version and the **[project plan](./docs/project-plan.md)** for the full picture._
 
-This repo is **dual-purpose**: it is the source for our GitHub Pages **website** *and* the home for the **tooling** we build during the hackathon (under `tools/`).
+This repo is **dual-purpose**: it is the source for our **website** *and* the home for the **tooling** we build during the hackathon (under `tools/`).
 
 ## Team
 
@@ -42,6 +44,8 @@ Requires Node 20+ (CI uses Node 22 LTS).
 
 The site auto-deploys to **Azure Static Web Apps** via GitHub Actions on every push to `main` (`.github/workflows/azure-static-web-apps.yml`). Connect an Azure Static Web Apps resource and set the `AZURE_STATIC_WEB_APPS_API_TOKEN` repo secret; SPA deep-link routing is handled by `public/staticwebapp.config.json`.
 
+**Custom domain:** `pattern-buddy.com` (apex) and `www.pattern-buddy.com` are served by the same Azure Static Web App — DNS on **Cloudflare** (DNS-only), TLS managed by Azure. The Azure default hostname stays live as a backup. DNS records are documented in the [deploy runbook](./.claude/skills/deploy-azure/SKILL.md).
+
 ## Project docs
 
 All planning lives in **[`docs/`](./docs/)**:
@@ -55,7 +59,7 @@ All planning lives in **[`docs/`](./docs/)**:
 ## Repo layout
 
 ```
-src/        React + TypeScript website (deploys to GitHub Pages)
+src/        React + TypeScript website (deploys to Azure Static Web Apps)
 public/     static assets
 docs/       planning docs
 tools/      hackathon tooling (added as we build it)

@@ -8,7 +8,8 @@ description: Deploy this site (Soul Review) to Azure Static Web Apps. Use when a
 The site (the React + Vite app in `src/`) is hosted on **Azure Static Web Apps** (Free SKU — no cost). SPA deep-link routing is handled by `public/staticwebapp.config.json` (copied into `dist/` on build).
 
 ## Live URL
-https://green-sea-012dd340f.7.azurestaticapps.net/
+- **Primary:** https://pattern-buddy.com — and https://www.pattern-buddy.com
+- **Backup:** https://green-sea-012dd340f.7.azurestaticapps.net/ — the Azure default hostname, always live (the custom domain is just a Cloudflare DNS layer on top).
 
 ## The Azure resource (already created)
 
@@ -20,6 +21,20 @@ https://green-sea-012dd340f.7.azurestaticapps.net/
 | Region / SKU | `eastus2` / `Free` |
 | Default hostname | `green-sea-012dd340f.7.azurestaticapps.net` |
 | Deployment source | **"Other"** (not portal-linked) — deploy via the committed workflow or the token |
+
+## Custom domain (Cloudflare DNS → Azure SWA)
+
+`pattern-buddy.com` (apex) and `www.pattern-buddy.com` both point at this Static Web App. Each is registered + validated in Azure (`az staticwebapp hostname set -n soul-review-hackathon-26 -g soul-review-rg --hostname <host> [--validation-method ...]`) with an Azure-managed TLS cert. DNS lives in the Cloudflare zone `pattern-buddy.com`, **DNS-only (grey cloud)** on the CNAMEs:
+
+| Type | Name | Value | Proxy |
+|---|---|---|---|
+| TXT | `@` | apex ownership-validation token from Azure (`--validation-method dns-txt-token`) | — |
+| CNAME | `@` | `green-sea-012dd340f.7.azurestaticapps.net` | DNS only |
+| CNAME | `www` | `green-sea-012dd340f.7.azurestaticapps.net` | DNS only |
+
+Keep the CNAMEs **grey-cloud**: Azure validates `www` by reading its CNAME (Cloudflare's orange-cloud proxy masks it) and provisions/renews the certs directly. Cloudflare flattens the apex CNAME to A records automatically. If you ever enable the proxy, set Cloudflare's SSL/TLS mode to **Full (Strict)** or you'll get a redirect loop. The Azure default hostname stays live as a backup.
+
+Verify a domain: `az staticwebapp hostname list -n soul-review-hackathon-26 -g soul-review-rg -o table` (status `Ready`), then `curl -I https://pattern-buddy.com`.
 
 ## Path A — CI (preferred): push to `main`
 
