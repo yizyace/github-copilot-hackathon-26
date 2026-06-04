@@ -16,7 +16,7 @@ export interface TeamMember {
 }
 
 export const team: TeamMember[] = [
-  { name: 'Andrew', handle: 'yizyace', role: 'Lead' },
+  { name: 'Andrew', handle: 'yizyace' },
   { name: 'Ben', handle: 'benjyi' },
   { name: 'Richard', handle: 'rlin25' },
   { name: 'Nghia', handle: 'N-star-dot' },
