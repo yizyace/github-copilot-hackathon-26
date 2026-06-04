@@ -1,0 +1,40 @@
+name: Pattern Pointers — PR Analysis
+
+# Decision #5 (analysis engine) POC: when a PR is opened or updated, analyze the
+# diff with Claude and post pattern observations as inline review comments.
+#
+# Note: PRs from forks do not receive secrets, so ANTHROPIC_API_KEY is only
+# available for same-repo branch PRs — which is the intended demo setup.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+# Needs to read the repo and write review comments back to the PR.
+permissions:
+  contents: read
+  pull-requests: write
+
+# One analysis per PR; a new push supersedes an in-flight run.
+concurrency:
+  group: pattern-pointers-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Analyze PR for software patterns
+        run: node tools/pattern-pointers/analyze.mjs
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
