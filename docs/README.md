@@ -12,6 +12,7 @@ This folder holds the planning docs for our **GitHub Copilot Hackathon 2026** pr
 - **[project-plan.md](./project-plan.md)** — the full project plan (problem, goals, scope, milestones, roles, risks).
 - **[eli5.md](./eli5.md)** — explain-it-like-I'm-5: the simplest possible description, for pitching, humans, and the website.
 - **[team.md](./team.md)** — who's on the team + TODO for collecting info.
+- **[design/](./design/)** — *proposed product* design docs for **"Soul Review"** (a personalized, soul-stack PR-review agent). A self-contained, labeled design set (RESEARCH / DESIGN / DECISION / EXPERIMENT / TODO). The product is still TBD, so this is a candidate the team can adopt, adapt, or pass on — it doesn't change the anchors above. Start at [design/overview.md](./design/overview.md).
 
 ## How we use these
 
