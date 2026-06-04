@@ -15,4 +15,11 @@ The CONSTITUTION.md file contains all engineering rules and conventions that sho
 <!-- Add project-specific Claude overrides below this line -->
 <!-- These overrides will be preserved during dd-dm pull operations -->
 
+## Project Context
+
+This is the **GitHub Copilot Hackathon 2026** repo — dual-purpose: a GitHub Pages
+website **and** hackathon tooling. For full agent context and file pointers, see the
+**Project Context** section in [`AGENTS.md`](./AGENTS.md). Planning docs live in
+[`docs/`](./docs/). Follow [`CONSTITUTION.md`](./CONSTITUTION.md) (atomic + conventional commits).
+
 <!-- dd-dm:custom:end -->
