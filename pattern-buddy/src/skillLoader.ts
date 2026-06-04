@@ -42,7 +42,10 @@ export interface Skill {
  *                     filename without its `.md` extension).
  */
 export function parseSkill(raw: string, fallbackSlug?: string): Skill | null {
-  const normalized = raw.replace(/^﻿/, ''); // strip BOM if present
+  // Strip BOM and normalize CRLF/CR so the `\n`-based fence regex and the
+  // line-by-line frontmatter parse work regardless of the file's line endings
+  // (Windows runners / .gitattributes can deliver CRLF).
+  const normalized = raw.replace(/^﻿/, '').replace(/\r\n?/g, '\n');
   const match = /^---\s*\n([\s\S]*?)\n---\s*\n?([\s\S]*)$/.exec(normalized);
   if (!match) {
     // Malformed: no `---` frontmatter fences.

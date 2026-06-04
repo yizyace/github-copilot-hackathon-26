@@ -101,6 +101,15 @@ describe('parseSkill', () => {
     const raw = ['---', 'category: dry', '---', 'body'].join('\n');
     expect(parseSkill(raw)).toBeNull();
   });
+
+  it('parses frontmatter delivered with CRLF line endings', () => {
+    const skill = parseSkill(VALID.replace(/\n/g, '\r\n'));
+    expect(skill).not.toBeNull();
+    expect(skill?.slug).toBe('coupling');
+    expect(skill?.name).toBe('Coupling Issues');
+    expect(skill?.enabled).toBe(true);
+    expect(skill?.body).toBe('Watch for tight coupling between modules.\n\nPrefer dependency injection.');
+  });
 });
 
 describe('selectEnabled', () => {
