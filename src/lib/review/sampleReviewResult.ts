@@ -1,4 +1,4 @@
-// The pre-captured north-star run: a PR adds a slug-validation regex; Cassandra's
+// The pre-captured north-star run: a PR adds a slug-validation regex; PatternBuddy's
 // injection lens retrieves the seeded ReDoS lesson and cites it. This fixture is
 // what the landing demo and the editor's "Run demo review" render — no engine,
 // no keys. Mirrors docs/design/end-to-end-demo.md.
@@ -17,7 +17,7 @@ const redosComment = {
 }
 
 export const sampleReviewResult: ReviewResult = {
-  persona: 'Cassandra',
+  persona: 'PatternBuddy',
   avatar: '🔮',
   verdict: 'request_changes',
   summary:

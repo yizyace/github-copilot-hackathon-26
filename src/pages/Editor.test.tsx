@@ -6,7 +6,7 @@ import Editor from './Editor'
 describe('Editor', () => {
   beforeEach(() => localStorage.clear())
 
-  it('seeds with the Cassandra sample and offers validation + export', () => {
+  it('seeds with the PatternBuddy sample and offers validation + export', () => {
     render(
       <MemoryRouter>
         <Editor />
@@ -14,7 +14,7 @@ describe('Editor', () => {
     )
     expect(screen.getByText('Soul editor')).toBeInTheDocument()
     // Persona preview reflects the seeded sample.
-    expect(screen.getByText('Cassandra')).toBeInTheDocument()
+    expect(screen.getByText('PatternBuddy')).toBeInTheDocument()
     expect(screen.getByText(/well-formed/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /export \.soul/i })).toBeInTheDocument()
   })

@@ -14,7 +14,7 @@ export function Demo() {
       </Reveal>
       <Reveal delay={120}>
         <p className="sr-demo__lede">
-          A PR adds a slug-validation regex on request input. Cassandra&apos;s <code>injection</code>{' '}
+          A PR adds a slug-validation regex on request input. PatternBuddy&apos;s <code>injection</code>{' '}
           lens retrieves a past ReDoS lesson — and grounds her review in it. The harness shows the
           same run&apos;s internals: which memories each lens retrieved.
         </p>

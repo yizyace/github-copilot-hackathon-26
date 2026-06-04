@@ -14,7 +14,7 @@ const LIMITS = [
   {
     n: '03',
     title: 'Impersonal',
-    body: 'It encodes rules, not a reviewer. No consistent voice, no sense that "this is how Cassandra reviews," no taste that sharpens over time.',
+    body: 'It encodes rules, not a reviewer. No consistent voice, no sense that "this is how PatternBuddy reviews," no taste that sharpens over time.',
   },
 ]
 

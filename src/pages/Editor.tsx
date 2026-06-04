@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import '../styles/theme.css'
 import '../components/editor/editor.css'
-import { cassandraStack } from '../lib/soulStack/sample'
+import { patternBuddyStack } from '../lib/soulStack/sample'
 import type { SoulStack } from '../lib/soulStack/types'
 import { SIZE_LIMITS, countIssues, validateSoulStack } from '../lib/soulStack/validate'
 import { clearStack, loadStack, saveStack } from '../lib/soulStack/storage'
@@ -16,7 +16,7 @@ import { DemoReviewPanel } from '../components/editor/DemoReviewPanel'
 type Target = 'manifest' | 'soul' | 'ego' | 'rules' | 'journal'
 
 function Editor() {
-  const [stack, setStack] = useState<SoulStack>(() => loadStack(structuredClone(cassandraStack)))
+  const [stack, setStack] = useState<SoulStack>(() => loadStack(structuredClone(patternBuddyStack)))
   const [target, setTarget] = useState<Target>('manifest')
   const [demoOpen, setDemoOpen] = useState(false)
 
@@ -28,7 +28,7 @@ function Editor() {
   const { errors, warnings } = countIssues(issues)
 
   const loadSample = () => {
-    setStack(structuredClone(cassandraStack))
+    setStack(structuredClone(patternBuddyStack))
     setTarget('manifest')
   }
   const reset = () => {
@@ -61,7 +61,7 @@ function Editor() {
             {errors === 0 && warnings === 0 ? '✓ valid' : `${errors} err · ${warnings} warn`}
           </span>
           <button type="button" className="sr-btn sr-btn--ghost" onClick={loadSample}>
-            Load Cassandra
+            Load PatternBuddy
           </button>
           <button type="button" className="sr-btn sr-btn--ghost" onClick={reset}>
             Reset

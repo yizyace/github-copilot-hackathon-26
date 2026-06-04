@@ -82,7 +82,7 @@ open https://green-sea-012dd340f.7.azurestaticapps.net/
 open https://green-sea-012dd340f.7.azurestaticapps.net/editor
 ```
 
-With the Playwright MCP: `/` should show the "A reviewer with a soul. And a memory." hero; `/editor` should show the Soul editor seeded with the Cassandra sample. Both must render.
+With the Playwright MCP: `/` should show the "A reviewer with a soul. And a memory." hero; `/editor` should show the Soul editor seeded with the PatternBuddy sample. Both must render.
 
 ## Notes
 
