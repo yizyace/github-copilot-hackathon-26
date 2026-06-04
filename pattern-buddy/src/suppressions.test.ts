@@ -8,6 +8,23 @@ import {
   addSuppression,
 } from './suppressions';
 
+describe('sanitizes characters that would break the round-trip', () => {
+  it('strips ** and backticks so an over-formatted name still round-trips and matches', () => {
+    const written = formatSuppression({ patternName: '**Tight Coupling**', filePath: '`src/foo.ts`' });
+    const parsed  = parseSuppressions(`${SUPPRESSED_HEADER}\n${written}`);
+    expect(parsed).toEqual([{ patternName: 'Tight Coupling', filePath: 'src/foo.ts' }]);
+    expect(isSuppressed({ patternName: 'Tight Coupling', filePath: 'src/foo.ts', lineStart: 5 }, parsed)).toBe(true);
+  });
+
+  it('flattens newlines so a poisoned entry cannot truncate later suppressions', () => {
+    let md = addSuppression('', { patternName: 'Foo\n## Injected', filePath: 'src/a.ts' });
+    md = addSuppression(md, { patternName: 'Bar', filePath: 'src/b.ts' });
+    const parsed = parseSuppressions(md);
+    expect(parsed).toHaveLength(2);
+    expect(parsed.map(p => p.patternName).sort()).toEqual(['Bar', 'Foo ## Injected']);
+  });
+});
+
 describe('formatSuppression <-> parseSuppressions round-trip', () => {
   it('round-trips a suppression with a line', () => {
     const s: Suppression = { patternName: 'Tight Coupling', filePath: 'src/foo.ts', lineStart: 12 };

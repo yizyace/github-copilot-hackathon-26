@@ -14,12 +14,24 @@ export interface Suppression {
 
 export const SUPPRESSED_HEADER = '## Suppressed';
 
+// Strip characters that would break the canonical bullet round-trip — the `**`
+// bold delimiters and the `` ` `` code fence — and flatten newlines/runs of
+// whitespace. A model that over-formats `pattern_name`/`file_path` (e.g. returns
+// "**Tight Coupling**" or embeds a newline) must not be able to silently defeat
+// the suppression or truncate later entries.
+function clean(value: string): string {
+  return value.replace(/[*`]/g, '').replace(/\s+/g, ' ').trim();
+}
+
+const normName = (s: string): string => clean(s).toLowerCase();
+const normPath = (s: string): string => clean(s);
+
 // Render one suppression as a markdown bullet (the canonical on-disk form):
 //   - **Tight Coupling** in `src/foo.ts` (line 12)
 //   - **Tight Coupling** in `src/foo.ts`            (no line)
 export function formatSuppression(s: Suppression): string {
   const line = typeof s.lineStart === 'number' ? ` (line ${s.lineStart})` : '';
-  return `- **${s.patternName}** in \`${s.filePath}\`${line}`;
+  return `- **${clean(s.patternName)}** in \`${clean(s.filePath)}\`${line}`;
 }
 
 // One bullet, e.g.  - **Tight Coupling** in `src/foo.ts` (line 12)
@@ -74,10 +86,11 @@ export function isSuppressed(
   finding: { patternName: string; filePath: string; lineStart: number },
   suppressions: readonly Suppression[],
 ): boolean {
-  const fName = finding.patternName.trim().toLowerCase();
+  const fName = normName(finding.patternName);
+  const fPath = normPath(finding.filePath);
   return suppressions.some(s => {
-    if (s.filePath !== finding.filePath) return false;
-    if (s.patternName.trim().toLowerCase() !== fName) return false;
+    if (normPath(s.filePath) !== fPath) return false;
+    if (normName(s.patternName) !== fName) return false;
     if (typeof s.lineStart === 'number') return s.lineStart === finding.lineStart;
     return true;
   });
@@ -87,8 +100,8 @@ export function isSuppressed(
 // line (an absent line is distinct from a specific line). Used to de-dupe on
 // append and to back isSuppressed's "already recorded" check.
 function sameSuppression(a: Suppression, b: Suppression): boolean {
-  return a.filePath === b.filePath
-    && a.patternName.trim().toLowerCase() === b.patternName.trim().toLowerCase()
+  return normPath(a.filePath) === normPath(b.filePath)
+    && normName(a.patternName) === normName(b.patternName)
     && a.lineStart === b.lineStart;
 }
 
