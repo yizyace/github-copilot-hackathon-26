@@ -42,8 +42,10 @@ export async function loadHistory(context: AnalysisContext): Promise<AnalysisCon
   // model of relevant prior patterns. Only pass history once there's a real
   // entry (a "- " bullet); a bare template stays empty so the prompt's
   // "no history yet" path still kicks in on fresh repos.
-  const content    = fs.readFileSync(MD_PATH, 'utf8');
-  const hasEntries = /^\s*-\s+/m.test(content);
+  const content = fs.readFileSync(MD_PATH, 'utf8');
+  // A real memory entry is a "- ..." bullet that cites its PR (#N). Requiring the
+  // PR reference avoids treating a stray prose list or hand-added note as history.
+  const hasEntries = /^\s*-\s+.*#\d+/m.test(content);
   const history    = hasEntries ? content.trim() : '';
 
   core.info(hasEntries
