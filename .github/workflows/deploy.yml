@@ -29,8 +29,11 @@ jobs:
           node-version: 22
           cache: npm
 
+      # npm install (not npm ci): the lockfile is generated on macOS and omits
+      # linux-only native/wasm optional deps (e.g. @emnapi/*) that the rolldown
+      # toolchain needs on the Ubuntu runner, which makes strict `npm ci` fail.
       - name: Install dependencies
-        run: npm ci
+        run: npm install --no-audit --no-fund
 
       - name: Build
         run: npm run build
