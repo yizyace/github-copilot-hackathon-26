@@ -21,7 +21,7 @@ export function Hero({ onSeeDemo }: { onSeeDemo: () => void }) {
         </Reveal>
         <Reveal delay={160}>
           <p className="sr-hero__sub">
-            Soul Review is a GitHub Action that drops a code reviewer with a personality and a
+            Pattern Buddy is a GitHub Action that drops a code reviewer with a personality and a
             memory into your repo — not a flat <code>AGENTS.md</code> that says the same thing to
             everyone, but a reviewer with values, a role on your team, hard rules, and a journal it
             recalls when it&apos;s relevant to the PR in front of it.

@@ -3,7 +3,7 @@
 
 export const siteConfig = {
   hackathon: 'GitHub Copilot Hackathon 2026',
-  product: 'Soul Review',
+  product: 'Pattern Buddy',
   tagline: 'A code reviewer with a soul — and a memory.',
   repoUrl: 'https://github.com/yizyace/github-copilot-hackathon-26',
   siteUrl: 'https://pattern-buddy.com',
