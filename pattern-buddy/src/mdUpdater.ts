@@ -30,7 +30,7 @@ function appendToSection(content: string, sectionHeader: string, entry: string):
 
 export async function updateMD(context: AnalysisContext): Promise<AnalysisContext> {
   const { mdUpdates }  = context.output;
-  const { prNumber, repoOwner, repoName, branch } = context.input.prMetadata;
+  const { prNumber, repoOwner, repoName } = context.input.prMetadata;
 
   if (mdUpdates.length === 0) {
     core.info('PatternBuddy: No MD updates to commit.');
@@ -48,15 +48,26 @@ export async function updateMD(context: AnalysisContext): Promise<AnalysisContex
 
   fs.writeFileSync(MD_PATH, content, 'utf8');
 
-  const octokit   = github.getOctokit(core.getInput('github-token'));
-  const encoded   = Buffer.from(content).toString('base64');
+  const octokit = github.getOctokit(core.getInput('github-token'));
+  const encoded = Buffer.from(content).toString('base64');
 
-  const { data: existing } = await octokit.rest.repos.getContent({
-    owner: repoOwner,
-    repo:  repoName,
-    path:  '.pattern-pointers.md',
-    ref:   branch
-  }) as unknown as { data: { sha: string } };
+  // Commit to the default branch — pattern memory belongs in main, not on PR branches
+  const { data: repo }   = await octokit.rest.repos.get({ owner: repoOwner, repo: repoName });
+  const defaultBranch    = repo.default_branch;
+
+  // Get current SHA if the file already exists; undefined means create new
+  let existingSha: string | undefined;
+  try {
+    const { data: existing } = await octokit.rest.repos.getContent({
+      owner: repoOwner,
+      repo:  repoName,
+      path:  '.pattern-pointers.md',
+      ref:   defaultBranch
+    }) as unknown as { data: { sha: string } };
+    existingSha = existing.sha;
+  } catch {
+    core.info('PatternBuddy: .pattern-pointers.md not found on default branch — creating it.');
+  }
 
   await octokit.rest.repos.createOrUpdateFileContents({
     owner:   repoOwner,
@@ -64,11 +75,11 @@ export async function updateMD(context: AnalysisContext): Promise<AnalysisContex
     path:    '.pattern-pointers.md',
     message: `chore: PatternBuddy updates pattern memory for PR #${prNumber}`,
     content: encoded,
-    sha:     existing.sha,
-    branch
+    sha:     existingSha,
+    branch:  defaultBranch
   });
 
-  core.info(`PatternBuddy: Committed ${mdUpdates.length} update(s) to .pattern-pointers.md`);
+  core.info(`PatternBuddy: Committed ${mdUpdates.length} update(s) to .pattern-pointers.md on ${defaultBranch}`);
 
   return context;
 }
