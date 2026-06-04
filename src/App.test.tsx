@@ -11,8 +11,10 @@ describe('App routing', () => {
       </MemoryRouter>,
     )
     expect(
-      screen.getByRole('heading', { name: 'GitHub Copilot Hackathon 2026' }),
+      screen.getByRole('heading', { level: 1, name: /a reviewer with a soul/i }),
     ).toBeInTheDocument()
+    // The deck links through to the editor.
+    expect(screen.getAllByRole('link', { name: /editor/i }).length).toBeGreaterThan(0)
   })
 
   it('renders the chrome nav on the secondary pages', () => {

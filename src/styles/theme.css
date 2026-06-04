@@ -56,7 +56,8 @@
   color: var(--sr-ember-strong);
 }
 
-.theme-soul a {
+/* Only style "plain" links; buttons and labelled links keep their own colors. */
+.theme-soul a:not([class]) {
   color: var(--sr-spectral);
 }
 
