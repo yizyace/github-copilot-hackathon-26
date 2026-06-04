@@ -40552,39 +40552,50 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.postComments = postComments;
 const core = __importStar(__nccwpck_require__(7484));
 const github = __importStar(__nccwpck_require__(3228));
-function buildSummaryComment(context) {
-    const { comments } = context.output;
-    const { findings } = context.analysis;
-    const lines = ['## PatternBuddy Analysis\n'];
-    for (let i = 0; i < findings.length; i++) {
-        const f = findings[i];
-        const body = comments[i]?.body ?? '';
-        lines.push(`### \`${f.filePath}\` · lines ${f.lineStart}–${f.lineEnd}\n`);
-        lines.push(body);
-        lines.push('');
-    }
-    return lines.join('\n');
-}
+const diffPositions_1 = __nccwpck_require__(5838);
 async function postComments(context) {
-    const { comments } = context.output;
+    const { comments, summary } = context.output;
     const { prNumber, repoOwner, repoName } = context.input.prMetadata;
-    if (comments.length === 0) {
-        core.info('PatternBuddy: No findings to post.');
-        return context;
-    }
     const octokit = github.getOctokit(core.getInput('github-token'));
+    // Map each finding to a commentable diff position. Comments that can't be
+    // placed on the diff are rolled into the summary body instead of 422-ing the
+    // whole review.
+    const index = (0, diffPositions_1.buildDiffIndex)(context.input.diffContent);
+    const reviewComments = [];
+    const rolled = [];
+    for (const c of comments) {
+        const mapped = (0, diffPositions_1.mapFinding)({ filePath: c.filePath, lineStart: c.lineStart, lineEnd: c.lineEnd }, index);
+        if (mapped.kind === 'inline') {
+            reviewComments.push({
+                path: mapped.path,
+                line: mapped.line,
+                side: 'RIGHT',
+                ...(mapped.startLine ? { start_line: mapped.startLine, start_side: 'RIGHT' } : {}),
+                body: c.body
+            });
+        }
+        else if (mapped.kind === 'snap') {
+            reviewComments.push({
+                path: mapped.path,
+                line: mapped.line,
+                side: 'RIGHT',
+                body: `_(re: \`${c.filePath}\` line ${mapped.originalLine})_\n\n${c.body}`
+            });
+        }
+        else {
+            rolled.push(`### \`${c.filePath}\` · line ${mapped.originalLine}\n\n${c.body}`);
+        }
+    }
+    let body = summary;
+    if (rolled.length > 0) {
+        body += `\n\n---\n\n### Notes on lines outside this diff\n\n${rolled.join('\n\n')}`;
+    }
     const { data: pr } = await octokit.rest.pulls.get({
-        owner: repoOwner,
-        repo: repoName,
-        pull_number: prNumber
+        owner: repoOwner, repo: repoName, pull_number: prNumber
     });
     const commitId = pr.head.sha;
-    const reviewComments = comments.map(comment => ({
-        path: comment.filePath,
-        line: comment.lineEnd,
-        start_line: comment.lineStart !== comment.lineEnd ? comment.lineStart : undefined,
-        body: comment.body
-    }));
+    // Always post exactly one review: a summary body plus whatever inline comments
+    // are placeable. A clean PR still gets one encouraging review.
     try {
         await octokit.rest.pulls.createReview({
             owner: repoOwner,
@@ -40592,21 +40603,259 @@ async function postComments(context) {
             pull_number: prNumber,
             commit_id: commitId,
             event: 'COMMENT',
+            body,
             comments: reviewComments
         });
-        core.info(`PatternBuddy: Posted ${comments.length} inline comment(s).`);
+        core.info(`PatternBuddy: Posted review with ${reviewComments.length} inline comment(s).`);
+        return context;
     }
     catch (err) {
-        core.warning(`PatternBuddy: Inline comments failed (${err}) — falling back to summary comment.`);
+        core.warning(`PatternBuddy: Inline review rejected (${err}) — retrying with comments folded into the summary.`);
+    }
+    // Retry once with no inline comments: fold them into the body so nothing is lost.
+    const folded = reviewComments
+        .map(rc => `- \`${rc.path}:${rc.line}\`: ${rc.body}`)
+        .join('\n\n');
+    const retryBody = reviewComments.length > 0
+        ? `${body}\n\n---\n\n### Inline notes\n\n${folded}`
+        : body;
+    try {
+        await octokit.rest.pulls.createReview({
+            owner: repoOwner,
+            repo: repoName,
+            pull_number: prNumber,
+            commit_id: commitId,
+            event: 'COMMENT',
+            body: retryBody
+        });
+        core.info('PatternBuddy: Posted review summary (inline comments folded into the body).');
+    }
+    catch (err) {
+        core.warning(`PatternBuddy: createReview failed again (${err}) — falling back to an issue comment.`);
         await octokit.rest.issues.createComment({
             owner: repoOwner,
             repo: repoName,
             issue_number: prNumber,
-            body: buildSummaryComment(context)
+            body: retryBody
         });
-        core.info(`PatternBuddy: Posted findings as a summary comment.`);
+        core.info('PatternBuddy: Posted summary as an issue comment.');
     }
     return context;
+}
+
+
+/***/ }),
+
+/***/ 5838:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+/**
+ * diffPositions — map PatternBuddy findings onto commentable GitHub diff
+ * positions so inline PR-review comments never get rejected.
+ *
+ * The GitHub Reviews API (`octokit.pulls.createReview`, `comments[]`) only
+ * accepts an inline comment when its target line is part of the unified diff.
+ * A SINGLE off-diff comment makes GitHub 422 the *entire* review, so we never
+ * hand a finding's raw line number straight to the API. Instead we:
+ *
+ *   1. Parse the PR's whole unified diff (one multi-file string) into the exact
+ *      set of commentable RIGHT-side positions, keyed by "path:line" — the index.
+ *   2. For each finding, decide whether it is:
+ *        - 'inline'   → commentable as-is (emit a real inline comment; multi-line
+ *                       when both endpoints are commentable on the RIGHT side),
+ *        - 'snap'     → not commentable, but a commentable RIGHT-side line exists
+ *                       within ±3 (snap to the nearest; remember the original line),
+ *        - 'fallback' → not commentable at all / file absent (caller rolls it into
+ *                       the summary body).
+ *
+ * Nothing is ever silently dropped.
+ *
+ * We only ever target the RIGHT side (new-file line numbers), because findings
+ * carry new-file line ranges and we comment on added/context lines.
+ *
+ * Unified-diff grammar this module relies on:
+ *   `diff --git a/<p> b/<p>`  → start of a new file section
+ *   `--- a/<p>`               → old-file header (ignored)
+ *   `+++ b/<p>`               → new-file header; `+++ /dev/null` = deleted file
+ *                               (no RIGHT side → skipped for inline)
+ *   `@@ -oldStart,oldCount +newStart,newCount @@`  → hunk header
+ *     ' ' context  → present on both sides: advance old & new (commentable @ new)
+ *     '+' added    → present on the new file only: advance new (commentable @ new)
+ *     '-' removed  → present on the old file only: advance old (LEFT — skipped)
+ *     '\'          → "\ No newline at end of file" marker; consumes nothing.
+ */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SNAP_RADIUS = void 0;
+exports.buildDiffIndex = buildDiffIndex;
+exports.isCommentable = isCommentable;
+exports.nearestCommentable = nearestCommentable;
+exports.mapFinding = mapFinding;
+/** Lines within this radius are eligible for snapping. */
+exports.SNAP_RADIUS = 3;
+const SIDE = 'RIGHT';
+function key(path, line) {
+    return `${path}:${line}`;
+}
+const DIFF_GIT_RE = /^diff --git /;
+const NEW_FILE_RE = /^\+\+\+ (.+)$/;
+const HUNK_RE = /^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@/;
+/**
+ * Strip the `b/` (or `a/`) prefix Git puts on diff paths so the result matches
+ * the bare repo-relative paths findings use (e.g. `src/foo.ts`). Quoted paths
+ * (those containing spaces/specials) are left as-is after prefix removal.
+ */
+function normalizeNewPath(raw) {
+    const trimmed = raw.trim();
+    if (trimmed === '/dev/null')
+        return null; // deleted file: no RIGHT side
+    if (trimmed.startsWith('b/'))
+        return trimmed.slice(2);
+    if (trimmed.startsWith('a/'))
+        return trimmed.slice(2);
+    return trimmed;
+}
+/**
+ * Build the commentable RIGHT-side index from a single multi-file unified diff.
+ *
+ * The diff is walked line by line. A `+++ b/<path>` line opens the current
+ * file's RIGHT side (or closes it off when `/dev/null`). Within each `@@` hunk
+ * we advance the new-file counter and record context (' ') and added ('+')
+ * lines as commentable.
+ */
+function buildDiffIndex(unifiedDiff) {
+    const index = { commentable: new Set(), byFile: new Map() };
+    if (!unifiedDiff)
+        return index;
+    const lines = unifiedDiff.split('\n');
+    let currentPath = null; // null = no RIGHT side (preamble/deleted)
+    let newLine = 0;
+    let inHunk = false;
+    const mark = (path, line) => {
+        const k = key(path, line);
+        if (index.commentable.has(k))
+            return;
+        index.commentable.add(k);
+        const arr = index.byFile.get(path);
+        if (arr)
+            arr.push(line);
+        else
+            index.byFile.set(path, [line]);
+    };
+    for (const raw of lines) {
+        // New file section: reset hunk state until we see its `+++` header.
+        if (DIFF_GIT_RE.test(raw)) {
+            currentPath = null;
+            inHunk = false;
+            continue;
+        }
+        // New-file header decides whether this file has a commentable RIGHT side.
+        const newFile = NEW_FILE_RE.exec(raw);
+        if (newFile) {
+            currentPath = normalizeNewPath(newFile[1]);
+            inHunk = false;
+            continue;
+        }
+        // Old-file header — ignore (but don't let its leading '-' be miscounted).
+        if (raw.startsWith('--- '))
+            continue;
+        const hunk = HUNK_RE.exec(raw);
+        if (hunk) {
+            newLine = Number(hunk[1]);
+            inHunk = true;
+            continue;
+        }
+        // A blank line is never a valid in-hunk body line (those start with ' ',
+        // '+', '-' or '\'). It marks the end of the current hunk — e.g. the trailing
+        // newline at EOF or a separator before the next section. End the hunk so the
+        // empty string isn't miscounted as a context line.
+        if (raw === '') {
+            inHunk = false;
+            continue;
+        }
+        // Outside a hunk, or in a deleted/headerless file: nothing to record.
+        if (!inHunk || currentPath === null)
+            continue;
+        const marker = raw[0];
+        if (marker === '+') {
+            mark(currentPath, newLine);
+            newLine++;
+        }
+        else if (marker === '-') {
+            // Removed line: LEFT side only — not commentable on the RIGHT.
+        }
+        else if (marker === '\\') {
+            // "\ No newline at end of file": consumes no line on either side.
+        }
+        else {
+            // Context line (' '): present on both sides; commentable on the RIGHT.
+            mark(currentPath, newLine);
+            newLine++;
+        }
+    }
+    for (const arr of index.byFile.values()) {
+        arr.sort((a, b) => a - b);
+    }
+    return index;
+}
+/** Is `(path, line)` a commentable RIGHT-side position? */
+function isCommentable(index, path, line) {
+    return index.commentable.has(key(path, line));
+}
+/**
+ * Nearest commentable RIGHT-side line to `line` within `radius`, or null.
+ * Tie-break: smaller distance first, then the smaller line number (so results
+ * are deterministic). `byFile` is sorted ascending, so the first candidate at
+ * the best distance is already the smallest line number.
+ */
+function nearestCommentable(index, path, line, radius = exports.SNAP_RADIUS) {
+    const arr = index.byFile.get(path);
+    if (!arr || arr.length === 0)
+        return null;
+    let best = null;
+    let bestDist = Infinity;
+    for (const candidate of arr) {
+        const dist = Math.abs(candidate - line);
+        if (dist > radius)
+            continue;
+        if (dist < bestDist) {
+            best = candidate;
+            bestDist = dist;
+            if (bestDist === 0)
+                break; // exact hit can't be beaten
+        }
+    }
+    return best;
+}
+/**
+ * Map one finding onto a valid review position.
+ *
+ * Anchor is `lineEnd` (the end of the finding's range). Multi-line: include
+ * `startLine` only when BOTH endpoints are commentable on the RIGHT side and
+ * `lineStart < lineEnd`; otherwise collapse to a single-line comment on
+ * `lineEnd` (and snap that if it isn't commentable).
+ */
+function mapFinding(finding, index) {
+    const { filePath, lineStart, lineEnd } = finding;
+    const endCommentable = isCommentable(index, filePath, lineEnd);
+    // --- Multi-line inline: both endpoints commentable on RIGHT, start < end. ---
+    if (endCommentable &&
+        lineStart < lineEnd &&
+        isCommentable(index, filePath, lineStart)) {
+        return { kind: 'inline', path: filePath, line: lineEnd, startLine: lineStart, side: SIDE };
+    }
+    // --- Single-line inline (anchor commentable; collapse any multi-line span). ---
+    if (endCommentable) {
+        return { kind: 'inline', path: filePath, line: lineEnd, side: SIDE };
+    }
+    // --- Snap to the nearest commentable RIGHT-side line within ±3. ---
+    const snapped = nearestCommentable(index, filePath, lineEnd);
+    if (snapped !== null) {
+        return { kind: 'snap', path: filePath, line: snapped, side: SIDE, originalLine: lineEnd };
+    }
+    // --- Nothing nearby / file absent → caller rolls it into the summary. ---
+    return { kind: 'fallback', path: filePath, originalLine: lineEnd };
 }
 
 
@@ -40994,7 +41243,7 @@ async function buildInput() {
     return {
         input,
         analysis: { findings: [] },
-        output: { comments: [], mdUpdates: [] }
+        output: { comments: [], mdUpdates: [], summary: '' }
     };
 }
 
@@ -41065,6 +41314,13 @@ function appendToSection(content, sectionHeader, entry) {
     const insertPoint = nextHeader === -1 ? content.length : nextHeader;
     return content.slice(0, insertPoint) + entry + '\n' + content.slice(insertPoint);
 }
+// Stable identity of a memory entry, independent of PR number and of Claude's
+// run-to-run observation wording. Matches the prefix emitted by
+// outputBuilder.buildMDEntry(); the trailing en-dash after lineStart stops
+// "4" from matching "42".
+function entrySignature(update) {
+    return `**${update.patternName}** in \`${update.filePath}\` (lines ${update.lineStart}–`;
+}
 async function updateMD(context) {
     const { mdUpdates } = context.output;
     const { prNumber, repoOwner, repoName } = context.input.prMetadata;
@@ -41072,20 +41328,13 @@ async function updateMD(context) {
         core.info('PatternBuddy: No MD updates to commit.');
         return context;
     }
-    let content = fs.existsSync(MD_PATH)
-        ? fs.readFileSync(MD_PATH, 'utf8')
-        : '';
-    for (const update of mdUpdates) {
-        const header = SECTION_HEADERS[update.category] ?? SECTION_HEADERS['other'];
-        content = appendToSection(content, header, update.entry);
-    }
-    fs.writeFileSync(MD_PATH, content, 'utf8');
     const octokit = github.getOctokit(core.getInput('github-token'));
-    const encoded = Buffer.from(content).toString('base64');
-    // Commit to the default branch — pattern memory belongs in main, not on PR branches
+    // Pattern memory is the source of truth on the default branch. Read, update,
+    // and commit it *there* so PRs build on the latest memory instead of
+    // overwriting it with a (possibly stale) copy from the PR branch.
     const { data: repo } = await octokit.rest.repos.get({ owner: repoOwner, repo: repoName });
     const defaultBranch = repo.default_branch;
-    // Get current SHA if the file already exists; undefined means create new
+    let baseContent = '';
     let existingSha;
     try {
         const { data: existing } = await octokit.rest.repos.getContent({
@@ -41095,20 +41344,41 @@ async function updateMD(context) {
             ref: defaultBranch
         });
         existingSha = existing.sha;
+        baseContent = Buffer.from(existing.content, 'base64').toString('utf8');
     }
     catch {
+        // Cold start: no memory on the default branch yet. Seed from the local copy
+        // (historyLoader writes a template) so the committed file keeps its sections.
+        baseContent = fs.existsSync(MD_PATH) ? fs.readFileSync(MD_PATH, 'utf8') : '';
         core.info('PatternBuddy: .pattern-pointers.md not found on default branch — creating it.');
     }
+    let content = baseContent;
+    let added = 0;
+    for (const update of mdUpdates) {
+        if (content.includes(entrySignature(update))) {
+            core.info(`PatternBuddy: Skipping duplicate memory entry (${update.patternName} @ ${update.filePath}:${update.lineStart}).`);
+            continue;
+        }
+        const header = SECTION_HEADERS[update.category] ?? SECTION_HEADERS['other'];
+        content = appendToSection(content, header, update.entry);
+        added++;
+    }
+    if (added === 0) {
+        core.info('PatternBuddy: No new memory entries — all findings already recorded.');
+        return context;
+    }
+    // Keep the local working copy in sync; historyLoader reads it within this run.
+    fs.writeFileSync(MD_PATH, content, 'utf8');
     await octokit.rest.repos.createOrUpdateFileContents({
         owner: repoOwner,
         repo: repoName,
         path: '.pattern-pointers.md',
         message: `chore: PatternBuddy updates pattern memory for PR #${prNumber}`,
-        content: encoded,
+        content: Buffer.from(content).toString('base64'),
         sha: existingSha,
         branch: defaultBranch
     });
-    core.info(`PatternBuddy: Committed ${mdUpdates.length} update(s) to .pattern-pointers.md on ${defaultBranch}`);
+    core.info(`PatternBuddy: Committed ${added} new memory ${added === 1 ? 'entry' : 'entries'} to .pattern-pointers.md on ${defaultBranch}`);
     return context;
 }
 
@@ -41147,10 +41417,57 @@ function buildMDEntry(finding, prNumber) {
         : '';
     return `- **${finding.patternName}** in \`${finding.filePath}\` (lines ${finding.lineStart}–${finding.lineEnd}, PR #${prNumber}): ${finding.observation}${recurring}`;
 }
+const SEVERITY_ORDER = ['high', 'medium', 'low'];
+const SUMMARY_VERDICT = {
+    mentor: {
+        clean: `Nothing stood out this time — the design reads cleanly. Nice work. 💚`,
+        found: n => `I spotted **${n}** thing${n === 1 ? '' : 's'} worth a look. Nothing alarming — let's make it even sharper together.`
+    },
+    roast: {
+        clean: `No patterns to roast. Clean diff. Don't let it go to your head. 🔥`,
+        found: n => `**${n}** finding${n === 1 ? '' : 's'}. Pull up a chair — we need to talk about a few of these. 🔥`
+    },
+    zen: {
+        clean: `The diff is still water. Nothing to surface today. 🌿`,
+        found: n => `**${n}** observation${n === 1 ? '' : 's'} arose. Sit with each; they are invitations, not verdicts. 🌿`
+    }
+};
+// Deterministic, tone-aware review summary built client-side from the findings,
+// so every PR gets one overall verdict even when Claude returns no prose.
+function buildSummary(findings, tone, repoOwner, repoName) {
+    const memoryLink = `https://github.com/${repoOwner}/${repoName}/blob/HEAD/.pattern-pointers.md`;
+    const verdict = SUMMARY_VERDICT[tone] ?? SUMMARY_VERDICT['mentor'];
+    const lines = ['## 🧭 PatternBuddy review', ''];
+    if (findings.length === 0) {
+        lines.push(verdict.clean, '', `📓 Pattern memory: [.pattern-pointers.md](${memoryLink})`);
+        return lines.join('\n');
+    }
+    lines.push(verdict.found(findings.length), '');
+    const sevBadge = { high: '🔴 high', medium: '🟡 medium', low: '🟢 low' };
+    const bySeverity = SEVERITY_ORDER
+        .map(s => ({ s, n: findings.filter(f => f.severity === s).length }))
+        .filter(x => x.n > 0);
+    lines.push('**Severity:** ' + bySeverity.map(x => `${sevBadge[x.s]} ${x.n}`).join(' · '));
+    const catCounts = new Map();
+    for (const f of findings)
+        catCounts.set(f.category, (catCounts.get(f.category) ?? 0) + 1);
+    const cats = Array.from(catCounts.entries()).sort((a, b) => b[1] - a[1]);
+    lines.push('**Categories:** ' + cats.map(([c, n]) => `\`${c}\` ${n}`).join(' · '));
+    const recurring = findings.filter(f => f.isRecurring);
+    if (recurring.length > 0) {
+        lines.push('', `**♻️ Recurring (${recurring.length}):**`);
+        for (const f of recurring) {
+            const ref = f.priorReference ? ` — previously ${f.priorReference}` : '';
+            lines.push(`- **${f.patternName}** in \`${f.filePath}\`${ref}`);
+        }
+    }
+    lines.push('', `📓 Full pattern memory: [.pattern-pointers.md](${memoryLink})`);
+    return lines.join('\n');
+}
 async function buildOutput(context) {
     const { findings } = context.analysis;
     const { tone } = context.input.config;
-    const { prNumber } = context.input.prMetadata;
+    const { prNumber, repoOwner, repoName } = context.input.prMetadata;
     const comments = findings.map(finding => ({
         filePath: finding.filePath,
         lineStart: finding.lineStart,
@@ -41159,9 +41476,13 @@ async function buildOutput(context) {
     }));
     const mdUpdates = findings.map(finding => ({
         category: finding.category,
-        entry: buildMDEntry(finding, prNumber)
+        entry: buildMDEntry(finding, prNumber),
+        patternName: finding.patternName,
+        filePath: finding.filePath,
+        lineStart: finding.lineStart
     }));
-    const output = { comments, mdUpdates };
+    const summary = buildSummary(findings, tone, repoOwner, repoName);
+    const output = { comments, mdUpdates, summary };
     return { ...context, output };
 }
 
