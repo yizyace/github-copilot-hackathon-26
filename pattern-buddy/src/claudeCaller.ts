@@ -1,7 +1,7 @@
-import Anthropic from '@anthropic-ai/sdk';
 import * as core from '@actions/core';
 import { AnalysisContext, Finding, AnalysisPayload } from './types';
 import { buildPrompt } from './prompt.template';
+import { createClient, ANTHROPIC_MODEL } from './anthropicClient';
 
 function validateFinding(obj: unknown): obj is Finding {
   if (typeof obj !== 'object' || obj === null) return false;
@@ -55,19 +55,11 @@ function parseFindings(raw: string): Finding[] {
 }
 
 export async function callClaude(context: AnalysisContext): Promise<AnalysisContext> {
-  const apiKey = core.getInput('anthropic-api-key') || process.env.ANTHROPIC_API_KEY || '';
-  if (!apiKey) {
-    throw new Error('ANTHROPIC_API_KEY secret is not set or is empty. Add it under repo Settings → Secrets → Actions.');
-  }
-  if (!apiKey.startsWith('sk-ant-')) {
-    throw new Error(`ANTHROPIC_API_KEY looks incorrect — expected it to start with "sk-ant-" but got a key starting with "${apiKey.slice(0, 6)}...". Check the secret value.`);
-  }
-  core.info(`PatternBuddy: Anthropic API key resolved: yes (length ${apiKey.length}, prefix ok)`);
-  const client = new Anthropic({ apiKey });
+  const client = createClient();
   const prompt = buildPrompt(context);
 
   const message = await client.messages.create({
-    model:      'claude-sonnet-4-6',
+    model:      ANTHROPIC_MODEL,
     max_tokens: 4096,
     messages: [
       {
