@@ -40552,6 +40552,19 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.postComments = postComments;
 const core = __importStar(__nccwpck_require__(7484));
 const github = __importStar(__nccwpck_require__(3228));
+function buildSummaryComment(context) {
+    const { comments } = context.output;
+    const { findings } = context.analysis;
+    const lines = ['## PatternBuddy Analysis\n'];
+    for (let i = 0; i < findings.length; i++) {
+        const f = findings[i];
+        const body = comments[i]?.body ?? '';
+        lines.push(`### \`${f.filePath}\` · lines ${f.lineStart}–${f.lineEnd}\n`);
+        lines.push(body);
+        lines.push('');
+    }
+    return lines.join('\n');
+}
 async function postComments(context) {
     const { comments } = context.output;
     const { prNumber, repoOwner, repoName } = context.input.prMetadata;
@@ -40572,15 +40585,27 @@ async function postComments(context) {
         start_line: comment.lineStart !== comment.lineEnd ? comment.lineStart : undefined,
         body: comment.body
     }));
-    await octokit.rest.pulls.createReview({
-        owner: repoOwner,
-        repo: repoName,
-        pull_number: prNumber,
-        commit_id: commitId,
-        event: 'COMMENT',
-        comments: reviewComments
-    });
-    core.info(`PatternBuddy: Posted ${comments.length} inline comment(s).`);
+    try {
+        await octokit.rest.pulls.createReview({
+            owner: repoOwner,
+            repo: repoName,
+            pull_number: prNumber,
+            commit_id: commitId,
+            event: 'COMMENT',
+            comments: reviewComments
+        });
+        core.info(`PatternBuddy: Posted ${comments.length} inline comment(s).`);
+    }
+    catch (err) {
+        core.warning(`PatternBuddy: Inline comments failed (${err}) — falling back to summary comment.`);
+        await octokit.rest.issues.createComment({
+            owner: repoOwner,
+            repo: repoName,
+            issue_number: prNumber,
+            body: buildSummaryComment(context)
+        });
+        core.info(`PatternBuddy: Posted findings as a summary comment.`);
+    }
     return context;
 }
 
