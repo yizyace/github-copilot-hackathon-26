@@ -32,6 +32,8 @@ lessons fetched on demand). The site also hosts a client-side **Soul editor** at
   - [`docs/team.md`](./docs/team.md) — team + GitHub handles.
   - The full Soul Review design set lives on the `docs/soul-review-design-proposal` branch.
 - [`CONSTITUTION.md`](./CONSTITUTION.md) — **engineering rules (read this)**.
+- [`SUBMISSION_CRITERIA.md`](./SUBMISSION_CRITERIA.md) — hackathon judging rubric,
+  submission checklist, and the 3:15 deadline. Keep this in mind when prioritizing.
 
 **Where code lives:**
 - `src/` — the React + TypeScript site (Vite): the scroll-snap landing/pitch deck

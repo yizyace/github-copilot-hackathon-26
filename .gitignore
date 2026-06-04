@@ -8,9 +8,13 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
-dist
-dist-ssr
+/dist
+/dist-ssr
 *.local
+
+# PatternBuddy action — compiled bundle must be committed
+!pattern-buddy/dist/
+!pattern-buddy/dist/**
 
 # Editor directories and files
 .vscode/*
