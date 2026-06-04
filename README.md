@@ -19,10 +19,10 @@ This repo is **dual-purpose**: it is the source for our GitHub Pages **website**
 | Andrew | [@yizyace](https://github.com/yizyace) | repo owner |
 | Ben | [@benjyi](https://github.com/benjyi) | — |
 | Richard | [@rlin25](https://github.com/rlin25) | — |
-| Nghia | [@N-star-dot](https://github.com/N-star-dot) | confirm handle |
-| Dilasha | [@P-dilasha-004](https://github.com/P-dilasha-004) | confirm handle |
+| Nghia | [@N-star-dot](https://github.com/N-star-dot) | — |
+| Dilasha | [@P-dilasha-004](https://github.com/P-dilasha-004) | — |
 
-**TODO:** collect emails/roles; confirm handles for Nghia & Dilasha; confirm repo write access. (See [docs/team.md](./docs/team.md).)
+**TODO:** collect emails/roles; confirm repo write access. (See [docs/team.md](./docs/team.md).)
 
 ## Getting started
 
