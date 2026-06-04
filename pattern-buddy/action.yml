@@ -11,6 +11,10 @@ inputs:
     description: 'PR number to analyze (used when triggering via workflow_dispatch)'
     required: false
     default: ''
+  mode:
+    description: 'What to run: "review" (default) analyzes a PR diff; "mention" handles an @patternbuddy PR comment.'
+    required: false
+    default: 'review'
 runs:
   using: 'node20'
   main: 'dist/index.js'
