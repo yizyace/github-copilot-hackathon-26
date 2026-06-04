@@ -32,10 +32,65 @@ function buildMDEntry(finding: Finding, prNumber: number): string {
   return `- **${finding.patternName}** in \`${finding.filePath}\` (lines ${finding.lineStart}–${finding.lineEnd}, PR #${prNumber}): ${finding.observation}${recurring}`;
 }
 
+const SEVERITY_ORDER: Finding['severity'][] = ['high', 'medium', 'low'];
+
+const SUMMARY_VERDICT: Record<string, { clean: string; found: (n: number) => string }> = {
+  mentor: {
+    clean: `Nothing stood out this time — the design reads cleanly. Nice work. 💚`,
+    found: n => `I spotted **${n}** thing${n === 1 ? '' : 's'} worth a look. Nothing alarming — let's make it even sharper together.`
+  },
+  roast: {
+    clean: `No patterns to roast. Clean diff. Don't let it go to your head. 🔥`,
+    found: n => `**${n}** finding${n === 1 ? '' : 's'}. Pull up a chair — we need to talk about a few of these. 🔥`
+  },
+  zen: {
+    clean: `The diff is still water. Nothing to surface today. 🌿`,
+    found: n => `**${n}** observation${n === 1 ? '' : 's'} arose. Sit with each; they are invitations, not verdicts. 🌿`
+  }
+};
+
+// Deterministic, tone-aware review summary built client-side from the findings,
+// so every PR gets one overall verdict even when Claude returns no prose.
+function buildSummary(findings: Finding[], tone: string, repoOwner: string, repoName: string): string {
+  const memoryLink = `https://github.com/${repoOwner}/${repoName}/blob/HEAD/.pattern-pointers.md`;
+  const verdict    = SUMMARY_VERDICT[tone] ?? SUMMARY_VERDICT['mentor'];
+  const lines: string[] = ['## 🧭 PatternBuddy review', ''];
+
+  if (findings.length === 0) {
+    lines.push(verdict.clean, '', `📓 Pattern memory: [.pattern-pointers.md](${memoryLink})`);
+    return lines.join('\n');
+  }
+
+  lines.push(verdict.found(findings.length), '');
+
+  const sevBadge: Record<string, string> = { high: '🔴 high', medium: '🟡 medium', low: '🟢 low' };
+  const bySeverity = SEVERITY_ORDER
+    .map(s => ({ s, n: findings.filter(f => f.severity === s).length }))
+    .filter(x => x.n > 0);
+  lines.push('**Severity:** ' + bySeverity.map(x => `${sevBadge[x.s]} ${x.n}`).join(' · '));
+
+  const catCounts = new Map<string, number>();
+  for (const f of findings) catCounts.set(f.category, (catCounts.get(f.category) ?? 0) + 1);
+  const cats = Array.from(catCounts.entries()).sort((a, b) => b[1] - a[1]);
+  lines.push('**Categories:** ' + cats.map(([c, n]) => `\`${c}\` ${n}`).join(' · '));
+
+  const recurring = findings.filter(f => f.isRecurring);
+  if (recurring.length > 0) {
+    lines.push('', `**♻️ Recurring (${recurring.length}):**`);
+    for (const f of recurring) {
+      const ref = f.priorReference ? ` — previously ${f.priorReference}` : '';
+      lines.push(`- **${f.patternName}** in \`${f.filePath}\`${ref}`);
+    }
+  }
+
+  lines.push('', `📓 Full pattern memory: [.pattern-pointers.md](${memoryLink})`);
+  return lines.join('\n');
+}
+
 export async function buildOutput(context: AnalysisContext): Promise<AnalysisContext> {
   const { findings } = context.analysis;
   const { tone }     = context.input.config;
-  const { prNumber } = context.input.prMetadata;
+  const { prNumber, repoOwner, repoName } = context.input.prMetadata;
 
   const comments: CommentDraft[] = findings.map(finding => ({
     filePath:  finding.filePath,
@@ -52,7 +107,9 @@ export async function buildOutput(context: AnalysisContext): Promise<AnalysisCon
     lineStart:   finding.lineStart
   }));
 
-  const output: OutputPayload = { comments, mdUpdates };
+  const summary = buildSummary(findings, tone, repoOwner, repoName);
+
+  const output: OutputPayload = { comments, mdUpdates, summary };
 
   return { ...context, output };
 }

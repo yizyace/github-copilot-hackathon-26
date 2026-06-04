@@ -79,6 +79,6 @@ export async function buildInput(): Promise<AnalysisContext> {
   return {
     input,
     analysis: { findings: [] },
-    output:   { comments: [], mdUpdates: [] }
+    output:   { comments: [], mdUpdates: [], summary: '' }
   };
 }

@@ -68,6 +68,7 @@ export interface MDUpdate {
 export interface OutputPayload {
   readonly comments:   CommentDraft[];
   readonly mdUpdates:  MDUpdate[];
+  readonly summary:    string;
 }
 
 export interface AnalysisContext {
