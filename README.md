@@ -1,12 +1,12 @@
 # GitHub Copilot Hackathon 2026
 
-[![Deploy to GitHub Pages](https://github.com/yizyace/github-copilot-hackathon-26/actions/workflows/deploy.yml/badge.svg)](https://github.com/yizyace/github-copilot-hackathon-26/actions/workflows/deploy.yml)
+[![Azure Static Web Apps](https://github.com/yizyace/github-copilot-hackathon-26/actions/workflows/azure-static-web-apps.yml/badge.svg)](https://github.com/yizyace/github-copilot-hackathon-26/actions/workflows/azure-static-web-apps.yml)
 
-> _<one-line tagline — TBD>_
+> _A code reviewer with a soul — and a memory._
 
-🌐 **Live site:** **https://yizyace.github.io/github-copilot-hackathon-26/** — deployed & live on GitHub Pages ✅
+🌐 **Live site:** **https://green-sea-012dd340f.7.azurestaticapps.net/** — live on Azure Static Web Apps ✅
 
-Status: **🚧 Hackathon WIP** — scaffolding is in place; the project specifics are TBD.
+Status: **🚧 Hackathon WIP** — the site/pitch deck is live; the review engine is in progress.
 
 ## What is this?
 
@@ -40,7 +40,7 @@ Requires Node 20+ (CI uses Node 22 LTS).
 
 ## Deploy
 
-The site auto-deploys to **GitHub Pages** via GitHub Actions on every push to `main` (`.github/workflows/deploy.yml`). No manual steps once Pages is enabled.
+The site auto-deploys to **Azure Static Web Apps** via GitHub Actions on every push to `main` (`.github/workflows/azure-static-web-apps.yml`). Connect an Azure Static Web Apps resource and set the `AZURE_STATIC_WEB_APPS_API_TOKEN` repo secret; SPA deep-link routing is handled by `public/staticwebapp.config.json`.
 
 ## Project docs
 
