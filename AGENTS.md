@@ -28,6 +28,8 @@ during the hackathon. The specific product is still **TBD**.
   - [`docs/eli5.md`](./docs/eli5.md) — simple version (pitch / website copy).
   - [`docs/team.md`](./docs/team.md) — team + GitHub handles.
 - [`CONSTITUTION.md`](./CONSTITUTION.md) — **engineering rules (read this)**.
+- [`SUBMISSION_CRITERIA.md`](./SUBMISSION_CRITERIA.md) — hackathon judging rubric,
+  submission checklist, and the 3:15 deadline. Keep this in mind when prioritizing.
 
 **Where code lives:**
 - `src/` — the React + TypeScript website (Vite). Deploys to
