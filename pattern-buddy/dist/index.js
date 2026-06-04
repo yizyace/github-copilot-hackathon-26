@@ -41021,7 +41021,9 @@ async function loadHistory(context) {
     // entry (a "- " bullet); a bare template stays empty so the prompt's
     // "no history yet" path still kicks in on fresh repos.
     const content = fs.readFileSync(MD_PATH, 'utf8');
-    const hasEntries = /^\s*-\s+/m.test(content);
+    // A real memory entry is a "- ..." bullet that cites its PR (#N). Requiring the
+    // PR reference avoids treating a stray prose list or hand-added note as history.
+    const hasEntries = /^\s*-\s+.*#\d+/m.test(content);
     const history = hasEntries ? content.trim() : '';
     core.info(hasEntries
         ? 'PatternBuddy: Loaded full pattern history.'
@@ -41631,7 +41633,10 @@ const path = __importStar(__nccwpck_require__(6928));
  *                     filename without its `.md` extension).
  */
 function parseSkill(raw, fallbackSlug) {
-    const normalized = raw.replace(/^﻿/, ''); // strip BOM if present
+    // Strip BOM and normalize CRLF/CR so the `\n`-based fence regex and the
+    // line-by-line frontmatter parse work regardless of the file's line endings
+    // (Windows runners / .gitattributes can deliver CRLF).
+    const normalized = raw.replace(/^﻿/, '').replace(/\r\n?/g, '\n');
     const match = /^---\s*\n([\s\S]*?)\n---\s*\n?([\s\S]*)$/.exec(normalized);
     if (!match) {
         // Malformed: no `---` frontmatter fences.
