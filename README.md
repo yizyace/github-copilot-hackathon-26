@@ -1,8 +1,10 @@
 # GitHub Copilot Hackathon 2026
 
+[![Deploy to GitHub Pages](https://github.com/yizyace/github-copilot-hackathon-26/actions/workflows/deploy.yml/badge.svg)](https://github.com/yizyace/github-copilot-hackathon-26/actions/workflows/deploy.yml)
+
 > _<one-line tagline — TBD>_
 
-🌐 **Live site:** https://yizyace.github.io/github-copilot-hackathon-26/ _(active after the first deploy)_
+🌐 **Live site:** **https://yizyace.github.io/github-copilot-hackathon-26/** — deployed & live on GitHub Pages ✅
 
 Status: **🚧 Hackathon WIP** — scaffolding is in place; the project specifics are TBD.
 
