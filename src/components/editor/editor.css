@@ -58,6 +58,15 @@
 .sr-editor__status.is-bad {
   color: var(--sr-danger);
 }
+.sr-editor__commit {
+  padding: 0.6rem 1rem;
+  font-size: 0.85rem;
+  background: var(--sr-surface-2, rgba(255, 255, 255, 0.04));
+  border-bottom: 1px solid var(--sr-border, rgba(255, 255, 255, 0.1));
+}
+.sr-editor__commit a {
+  color: var(--sr-accent, currentColor);
+}
 
 /* ---- Body grid ---- */
 .sr-editor__body {
