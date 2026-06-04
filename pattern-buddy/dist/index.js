@@ -41059,6 +41059,7 @@ exports.loadHistory = loadHistory;
 const core = __importStar(__nccwpck_require__(7484));
 const fs = __importStar(__nccwpck_require__(9896));
 const path = __importStar(__nccwpck_require__(6928));
+const suppressions_1 = __nccwpck_require__(6115);
 const MD_PATH = path.join(process.cwd(), '.pattern-pointers.md');
 const COLD_START_TEMPLATE = `# PatternBuddy — Pattern Memory
 
@@ -41087,7 +41088,7 @@ async function loadHistory(context) {
         fs.writeFileSync(MD_PATH, COLD_START_TEMPLATE, 'utf8');
         return {
             ...context,
-            input: { ...context.input, history: '' }
+            input: { ...context.input, history: '', suppressions: [] }
         };
     }
     // The memory file is small, so load it whole. The previous keyword-on-filepath
@@ -41100,12 +41101,12 @@ async function loadHistory(context) {
     // PR reference avoids treating a stray prose list or hand-added note as history.
     const hasEntries = /^\s*-\s+.*#\d+/m.test(content);
     const history = hasEntries ? content.trim() : '';
-    core.info(hasEntries
-        ? 'PatternBuddy: Loaded full pattern history.'
-        : 'PatternBuddy: Pattern memory has no entries yet.');
+    const suppressions = (0, suppressions_1.parseSuppressions)(content);
+    core.info(`${hasEntries ? 'PatternBuddy: Loaded full pattern history.' : 'PatternBuddy: Pattern memory has no entries yet.'}`
+        + ` ${suppressions.length} suppression(s).`);
     return {
         ...context,
-        input: { ...context.input, history }
+        input: { ...context.input, history, suppressions }
     };
 }
 
@@ -41304,7 +41305,8 @@ async function buildInput() {
         diffContent: diffData,
         config,
         history: '', // Populated by historyLoader
-        skills
+        skills,
+        suppressions: [] // Populated by historyLoader
     };
     return {
         input,
@@ -41529,9 +41531,11 @@ exports.runMention = runMention;
 const core = __importStar(__nccwpck_require__(7484));
 const github = __importStar(__nccwpck_require__(3228));
 const anthropicClient_1 = __nccwpck_require__(688);
+const suppressions_1 = __nccwpck_require__(6115);
 const TRIGGER = '@patternbuddy';
 const CONFIG_PATH = 'pattern-pointers.config.json';
 const SKILLS_DIR = 'pattern-buddy/skills';
+const MEMORY_PATH = '.pattern-pointers.md';
 /** Slugs of the playbooks that ship with the action — given to Claude so it can
  *  map "stop flagging factory patterns" → disable_skill factory-singleton. */
 const KNOWN_SKILL_SLUGS = [
@@ -41558,6 +41562,7 @@ const APPLY_ACTIONS = [
     'enable_skill',
     'disable_skill',
     'create_skill',
+    'suppress_finding',
     'none',
 ];
 const DEFAULT_CONFIG = { tone: 'mentor', strictness: 'balanced' };
@@ -41641,6 +41646,12 @@ function parseApplyChange(raw) {
         out.skill_category = obj.skill_category;
     if (typeof obj.rule_markdown === 'string')
         out.rule_markdown = obj.rule_markdown;
+    if (typeof obj.pattern_name === 'string')
+        out.pattern_name = obj.pattern_name;
+    if (typeof obj.file_path === 'string')
+        out.file_path = obj.file_path;
+    if (typeof obj.line === 'number')
+        out.line = obj.line;
     return out;
 }
 /** Prompt Claude to translate a free-text instruction into an ApplyChange JSON. */
@@ -41652,13 +41663,16 @@ function buildMentionPrompt(instruction) {
         '',
         'Reply with ONLY a single JSON object (no prose, no code fences) of this shape:',
         '{',
-        '  "action": "set_tone" | "set_strictness" | "enable_skill" | "disable_skill" | "create_skill" | "none",',
+        '  "action": "set_tone" | "set_strictness" | "enable_skill" | "disable_skill" | "create_skill" | "suppress_finding" | "none",',
         `  "tone": ${TONES.map(t => `"${t}"`).join(' | ')},                 // only for set_tone`,
         `  "strictness": ${STRICTNESSES.map(s => `"${s}"`).join(' | ')},    // only for set_strictness`,
         '  "skill_slug": "<one of the known slugs>",       // for enable_skill/disable_skill/create_skill',
         '  "skill_name": "<human name>",                   // for create_skill',
         `  "skill_category": ${CATEGORIES.map(c => `"${c}"`).join(' | ')},  // for create_skill`,
         '  "rule_markdown": "<markdown body>",             // for create_skill',
+        '  "pattern_name": "<the finding/pattern name to stop flagging>", // for suppress_finding',
+        '  "file_path": "<file the finding is in>",        // for suppress_finding',
+        '  "line": <line number>,                          // optional, for suppress_finding',
         '  "human_summary": "<one short sentence confirming what you changed, in the first person>"',
         '}',
         '',
@@ -41670,6 +41684,7 @@ function buildMentionPrompt(instruction) {
         '- "stop flagging factory patterns"/"ignore singletons" → disable_skill factory-singleton.',
         '- "focus on coupling"/"care about coupling more" → enable_skill coupling.',
         '- "stop checking circular deps" → disable_skill circular-deps.',
+        '- "ignore <pattern> in <file>", "that\'s a false positive", "stop flagging <pattern> at <file>:<line>" → suppress_finding with pattern_name + file_path (and line if a specific line is named). Use this (not disable_skill) whenever a specific FILE is named — disable_skill turns a whole playbook off everywhere.',
         '- Map the instruction to the closest known slug. Only use create_skill when the instruction',
         '  describes a genuinely new rule not covered by a known slug; invent a short kebab-case slug.',
         '- If you cannot confidently interpret the instruction, use action "none" and explain why in human_summary.',
@@ -41789,6 +41804,22 @@ async function dispatch(octokit, ref, branch, change, commitMsg) {
             await commitFile(octokit, ref, path, body, commitMsg, branch, existing.sha);
             return change.human_summary;
         }
+        case 'suppress_finding': {
+            if (!change.pattern_name || !change.file_path) {
+                throw new DispatchError("I couldn't tell which finding to suppress — I need a pattern name and a file, so nothing changed.");
+            }
+            const file = await readFile(octokit, ref, MEMORY_PATH, branch);
+            const updated = (0, suppressions_1.addSuppression)(file.content, {
+                patternName: change.pattern_name,
+                filePath: change.file_path,
+                ...(typeof change.line === 'number' ? { lineStart: change.line } : {}),
+            });
+            if (updated === file.content) {
+                return change.human_summary; // already suppressed — nothing to commit
+            }
+            await commitFile(octokit, ref, MEMORY_PATH, updated, commitMsg, branch, file.sha);
+            return change.human_summary;
+        }
         case 'none':
         default:
             return change.human_summary;
@@ -41873,12 +41904,13 @@ if (false) {}
 /***/ }),
 
 /***/ 4603:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildOutput = buildOutput;
+const suppressions_1 = __nccwpck_require__(6115);
 function buildCommentBody(finding, tone, prNumber) {
     const link = `[See ${finding.patternName}](#${finding.mdSection})`;
     const recurring = finding.isRecurring && finding.priorReference
@@ -41952,9 +41984,10 @@ function buildSummary(findings, tone, repoOwner, repoName) {
     return lines.join('\n');
 }
 async function buildOutput(context) {
-    const { findings } = context.analysis;
     const { tone } = context.input.config;
     const { prNumber, repoOwner, repoName } = context.input.prMetadata;
+    // Backstop: drop any finding the team has suppressed, even if the model re-flagged it.
+    const findings = context.analysis.findings.filter(f => !(0, suppressions_1.isSuppressed)(f, context.input.suppressions));
     const comments = findings.map(finding => ({
         filePath: finding.filePath,
         lineStart: finding.lineStart,
@@ -42005,6 +42038,10 @@ Your tone is measured, thoughtful, and contemplative.`
     const skillsBlock = skills.length > 0
         ? skills.map(s => `### ${s.name}\n${s.body.trim()}`).join('\n\n')
         : 'No custom playbooks configured — apply your general design-pattern expertise.';
+    const suppressions = context.input.suppressions;
+    const suppressedSection = suppressions.length > 0
+        ? `\nSUPPRESSED (the team has dismissed these — do NOT flag them again):\n${suppressions.map(s => `- ${s.patternName} in ${s.filePath}${s.lineStart != null ? ` (line ${s.lineStart})` : ''}`).join('\n')}\n`
+        : '';
     return `You are PatternBuddy — a senior engineer who has read every line of code this team has ever written.
 Your job is to analyze a pull request diff and identify software design patterns, anti-patterns, and architectural observations.
 You have access to the codebase's pattern history to identify recurring issues and connect dots across PRs.
@@ -42020,7 +42057,7 @@ ${skillsBlock}
 
 PATTERN HISTORY (from .pattern-pointers.md):
 ${context.input.history || 'No history yet. This is the first analysis for this repository.'}
-
+${suppressedSection}
 PR DIFF:
 ${context.input.diffContent}
 
@@ -42200,6 +42237,149 @@ function loadSkills(dir) {
 /** Select only the enabled skills. */
 function selectEnabled(skills) {
     return skills.filter(s => s.enabled);
+}
+
+
+/***/ }),
+
+/***/ 6115:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+// Pure module for finding-suppressions stored in `.pattern-pointers.md`.
+//
+// PatternBuddy lets a teammate dismiss a finding with `@patternbuddy ignore
+// <pattern@file:line>`. Each dismissal is recorded as a markdown bullet under a
+// `## Suppressed` section so future reviews skip it. This module owns the
+// parse/format/match/append logic and deliberately depends on nothing else
+// (no other pattern-buddy file, no `@actions/*`) so it stays trivially testable.
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SUPPRESSED_HEADER = void 0;
+exports.formatSuppression = formatSuppression;
+exports.parseSuppressions = parseSuppressions;
+exports.isSuppressed = isSuppressed;
+exports.addSuppression = addSuppression;
+exports.SUPPRESSED_HEADER = '## Suppressed';
+// Strip characters that would break the canonical bullet round-trip — the `**`
+// bold delimiters and the `` ` `` code fence — and flatten newlines/runs of
+// whitespace. A model that over-formats `pattern_name`/`file_path` (e.g. returns
+// "**Tight Coupling**" or embeds a newline) must not be able to silently defeat
+// the suppression or truncate later entries.
+function clean(value) {
+    return value.replace(/[*`]/g, '').replace(/\s+/g, ' ').trim();
+}
+const normName = (s) => clean(s).toLowerCase();
+const normPath = (s) => clean(s);
+// Render one suppression as a markdown bullet (the canonical on-disk form):
+//   - **Tight Coupling** in `src/foo.ts` (line 12)
+//   - **Tight Coupling** in `src/foo.ts`            (no line)
+function formatSuppression(s) {
+    const line = typeof s.lineStart === 'number' ? ` (line ${s.lineStart})` : '';
+    return `- **${clean(s.patternName)}** in \`${clean(s.filePath)}\`${line}`;
+}
+// One bullet, e.g.  - **Tight Coupling** in `src/foo.ts` (line 12)
+// Capture groups: 1=patternName, 2=filePath, 3=lineStart (optional).
+const BULLET_RE = /^\s*-\s+\*\*(.+?)\*\*\s+in\s+`(.+?)`(?:\s+\(line\s+(\d+)\))?\s*$/;
+// Split tolerant of CRLF / CR line endings, so files committed on either
+// platform parse identically.
+function splitLines(md) {
+    return md.split(/\r\n|\r|\n/);
+}
+// Parse the bullets under the `## Suppressed` section (until the next `## `
+// heading or EOF) back into Suppression[]. Tolerates a missing section -> [].
+// Round-trips with formatSuppression.
+function parseSuppressions(md) {
+    const lines = splitLines(md);
+    const out = [];
+    let inSection = false;
+    for (const raw of lines) {
+        const line = raw.trim();
+        if (!inSection) {
+            if (line === exports.SUPPRESSED_HEADER)
+                inSection = true;
+            continue;
+        }
+        // Any new `## ` heading ends the Suppressed section.
+        if (line.startsWith('## '))
+            break;
+        const m = BULLET_RE.exec(raw);
+        if (!m)
+            continue; // skip blanks / prose / malformed lines
+        const patternName = m[1].trim();
+        const filePath = m[2].trim();
+        const suppression = m[3] !== undefined
+            ? { patternName, filePath, lineStart: Number(m[3]) }
+            : { patternName, filePath };
+        out.push(suppression);
+    }
+    return out;
+}
+// True when a finding should be dropped. Match rules:
+//   - filePath: exact
+//   - patternName: case-insensitive + trimmed
+//   - lineStart: if the suppression carries one it must equal the finding's
+//     lineStart; otherwise the suppression applies to any line in that file.
+function isSuppressed(finding, suppressions) {
+    const fName = normName(finding.patternName);
+    const fPath = normPath(finding.filePath);
+    return suppressions.some(s => {
+        if (normPath(s.filePath) !== fPath)
+            return false;
+        if (normName(s.patternName) !== fName)
+            return false;
+        if (typeof s.lineStart === 'number')
+            return s.lineStart === finding.lineStart;
+        return true;
+    });
+}
+// Two suppressions are equivalent when they target the same file + pattern +
+// line (an absent line is distinct from a specific line). Used to de-dupe on
+// append and to back isSuppressed's "already recorded" check.
+function sameSuppression(a, b) {
+    return normPath(a.filePath) === normPath(b.filePath)
+        && normName(a.patternName) === normName(b.patternName)
+        && a.lineStart === b.lineStart;
+}
+// Return md with the suppression appended under `## Suppressed`, creating the
+// section at the end of the file if it is missing. De-dupes: if an equivalent
+// suppression (same file + pattern + line) already exists, md is returned
+// unchanged.
+function addSuppression(md, s) {
+    if (parseSuppressions(md).some(existing => sameSuppression(existing, s))) {
+        return md;
+    }
+    const bullet = formatSuppression(s);
+    // Preserve the document's existing newline style when it's CRLF; default to
+    // LF otherwise (including for empty input).
+    const eol = /\r\n/.test(md) ? '\r\n' : '\n';
+    const lines = splitLines(md);
+    const headerIdx = lines.findIndex(l => l.trim() === exports.SUPPRESSED_HEADER);
+    if (headerIdx === -1) {
+        // No section yet: create it at end of file. Guarantee a blank line before
+        // the new heading so it doesn't fuse onto trailing content.
+        const parts = [];
+        if (md.length > 0) {
+            parts.push(md.replace(/[\r\n]+$/, ''), '');
+        }
+        parts.push(exports.SUPPRESSED_HEADER, bullet);
+        return parts.join(eol) + eol;
+    }
+    // Insert the bullet after the last existing line of this section (before the
+    // next `## ` heading or EOF), trimming a trailing blank so bullets stay
+    // contiguous under the header.
+    let insertAt = lines.length;
+    for (let i = headerIdx + 1; i < lines.length; i++) {
+        if (lines[i].trim().startsWith('## ')) {
+            insertAt = i;
+            break;
+        }
+    }
+    while (insertAt > headerIdx + 1 && lines[insertAt - 1].trim() === '') {
+        insertAt--;
+    }
+    lines.splice(insertAt, 0, bullet);
+    return lines.join(eol);
 }
 
 

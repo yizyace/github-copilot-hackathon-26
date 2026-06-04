@@ -13,7 +13,8 @@ function ctx(skills: Skill[]): AnalysisContext {
       diffContent: 'diff --git a/x b/x',
       config: { tone: 'mentor', strictness: 'balanced' },
       history: '',
-      skills
+      skills,
+      suppressions: []
     },
     analysis: { findings: [] },
     output:   { comments: [], mdUpdates: [], summary: '' }

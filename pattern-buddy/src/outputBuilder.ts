@@ -1,4 +1,5 @@
 import { AnalysisContext, Finding, CommentDraft, MDUpdate, OutputPayload } from './types';
+import { isSuppressed } from './suppressions';
 
 function buildCommentBody(finding: Finding, tone: string, prNumber: number): string {
   const link      = `[See ${finding.patternName}](#${finding.mdSection})`;
@@ -88,9 +89,11 @@ function buildSummary(findings: Finding[], tone: string, repoOwner: string, repo
 }
 
 export async function buildOutput(context: AnalysisContext): Promise<AnalysisContext> {
-  const { findings } = context.analysis;
   const { tone }     = context.input.config;
   const { prNumber, repoOwner, repoName } = context.input.prMetadata;
+
+  // Backstop: drop any finding the team has suppressed, even if the model re-flagged it.
+  const findings = context.analysis.findings.filter(f => !isSuppressed(f, context.input.suppressions));
 
   const comments: CommentDraft[] = findings.map(finding => ({
     filePath:  finding.filePath,
