@@ -1,4 +1,9 @@
 {
   "tone": "mentor",
-  "strictness": "balanced"
+  "strictness": "balanced",
+  "architecture_map": {
+    "enabled": true,
+    "output": "docs/architecture.md",
+    "update_on": "merge"
+  }
 }

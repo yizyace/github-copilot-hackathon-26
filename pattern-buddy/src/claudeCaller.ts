@@ -1,7 +1,8 @@
-import Anthropic from '@anthropic-ai/sdk';
 import * as core from '@actions/core';
 import { AnalysisContext, Finding, AnalysisPayload } from './types';
 import { buildPrompt } from './prompt.template';
+import { createAnthropicClient } from './anthropicClient';
+import { extractJson } from './extractJson';
 
 function validateFinding(obj: unknown): obj is Finding {
   if (typeof obj !== 'object' || obj === null) return false;
@@ -20,22 +21,10 @@ function validateFinding(obj: unknown): obj is Finding {
   );
 }
 
-function extractJSON(raw: string): string {
-  const trimmed = raw.trim();
-  // Try extracting from ```json ... ``` or ``` ... ``` fences
-  const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (fenced) return fenced[1].trim();
-  // Try extracting a bare JSON array
-  const arrayStart = trimmed.indexOf('[');
-  const arrayEnd   = trimmed.lastIndexOf(']');
-  if (arrayStart !== -1 && arrayEnd > arrayStart) return trimmed.slice(arrayStart, arrayEnd + 1);
-  return trimmed;
-}
-
 function parseFindings(raw: string): Finding[] {
   let parsed: unknown;
   try {
-    parsed = JSON.parse(extractJSON(raw));
+    parsed = JSON.parse(extractJson(raw));
   } catch {
     core.error(`PatternBuddy: Claude returned unparseable JSON.\nRaw response:\n${raw}`);
     throw new Error('Claude response could not be parsed as JSON.');
@@ -55,15 +44,7 @@ function parseFindings(raw: string): Finding[] {
 }
 
 export async function callClaude(context: AnalysisContext): Promise<AnalysisContext> {
-  const apiKey = core.getInput('anthropic-api-key') || process.env.ANTHROPIC_API_KEY || '';
-  if (!apiKey) {
-    throw new Error('ANTHROPIC_API_KEY secret is not set or is empty. Add it under repo Settings → Secrets → Actions.');
-  }
-  if (!apiKey.startsWith('sk-ant-')) {
-    throw new Error(`ANTHROPIC_API_KEY looks incorrect — expected it to start with "sk-ant-" but got a key starting with "${apiKey.slice(0, 6)}...". Check the secret value.`);
-  }
-  core.info(`PatternBuddy: Anthropic API key resolved: yes (length ${apiKey.length}, prefix ok)`);
-  const client = new Anthropic({ apiKey });
+  const client = createAnthropicClient();
   const prompt = buildPrompt(context);
 
   const message = await client.messages.create({

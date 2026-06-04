@@ -3,6 +3,7 @@ import * as github from '@actions/github';
 import * as fs     from 'fs';
 import * as path   from 'path';
 import { AnalysisContext } from './types';
+import { commitFile } from './commitFile';
 
 const MD_PATH = path.join(process.cwd(), '.pattern-pointers.md');
 
@@ -30,7 +31,7 @@ function appendToSection(content: string, sectionHeader: string, entry: string):
 
 export async function updateMD(context: AnalysisContext): Promise<AnalysisContext> {
   const { mdUpdates }  = context.output;
-  const { prNumber, repoOwner, repoName, branch } = context.input.prMetadata;
+  const { prNumber, repoOwner, repoName } = context.input.prMetadata;
 
   if (mdUpdates.length === 0) {
     core.info('PatternBuddy: No MD updates to commit.');
@@ -48,27 +49,22 @@ export async function updateMD(context: AnalysisContext): Promise<AnalysisContex
 
   fs.writeFileSync(MD_PATH, content, 'utf8');
 
-  const octokit   = github.getOctokit(core.getInput('github-token'));
-  const encoded   = Buffer.from(content).toString('base64');
+  // Pattern memory belongs on the default branch (main), not on PR branches —
+  // observations accumulate there and are available to every future PR.
+  const octokit          = github.getOctokit(core.getInput('github-token'));
+  const { data: repo }   = await octokit.rest.repos.get({ owner: repoOwner, repo: repoName });
+  const defaultBranch    = repo.default_branch;
 
-  const { data: existing } = await octokit.rest.repos.getContent({
-    owner: repoOwner,
-    repo:  repoName,
-    path:  '.pattern-pointers.md',
-    ref:   branch
-  }) as unknown as { data: { sha: string } };
-
-  await octokit.rest.repos.createOrUpdateFileContents({
+  await commitFile({
     owner:   repoOwner,
     repo:    repoName,
+    branch:  defaultBranch,
     path:    '.pattern-pointers.md',
-    message: `chore: PatternBuddy updates pattern memory for PR #${prNumber}`,
-    content: encoded,
-    sha:     existing.sha,
-    branch
+    content,
+    message: `chore: PatternBuddy updates pattern memory for PR #${prNumber}`
   });
 
-  core.info(`PatternBuddy: Committed ${mdUpdates.length} update(s) to .pattern-pointers.md`);
+  core.info(`PatternBuddy: Committed ${mdUpdates.length} update(s) to .pattern-pointers.md on ${defaultBranch}`);
 
   return context;
 }

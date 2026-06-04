@@ -2,13 +2,19 @@ name: PatternBuddy Analysis
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened, closed]
   workflow_dispatch:
     inputs:
       pr-number:
         description: 'PR number to analyze'
         required: true
         type: string
+      mode:
+        description: 'Force a pass (auto-detected from the event if left as default)'
+        required: false
+        type: choice
+        default: auto
+        options: [auto, analyze, architecture]
 
 jobs:
   analyze:
@@ -25,3 +31,5 @@ jobs:
           anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           pr-number: ${{ inputs.pr-number }}
+          # "auto" maps to empty so the action detects the pass from the event.
+          mode: ${{ inputs.mode == 'auto' && '' || inputs.mode }}
