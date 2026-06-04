@@ -41498,11 +41498,13 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SAFE_SLUG = void 0;
 exports.stripTrigger = stripTrigger;
 exports.setSkillEnabled = setSkillEnabled;
 exports.buildSkillFile = buildSkillFile;
 exports.parseApplyChange = parseApplyChange;
 exports.buildMentionPrompt = buildMentionPrompt;
+exports.safeSlug = safeSlug;
 exports.runMention = runMention;
 /**
  * mention.ts — the @patternbuddy tuning handler.
@@ -41706,6 +41708,17 @@ async function commitFile(octokit, ref, path, content, message, branch, sha) {
 /** Class used to short-circuit dispatch with a user-facing message (e.g. skill 404). */
 class DispatchError extends Error {
 }
+/** Allowed skill-slug shape: lowercase kebab-case, ≤64 chars. The slug comes
+ *  from model output (influenced by the comment), so this guards the file path
+ *  against traversal — e.g. a slug of `../../.github/workflows/x` must be rejected
+ *  before it's ever joined into a path the bot can write with `contents: write`. */
+exports.SAFE_SLUG = /^[a-z0-9][a-z0-9-]{0,63}$/;
+function safeSlug(slug) {
+    if (!exports.SAFE_SLUG.test(slug)) {
+        throw new DispatchError(`\`${slug}\` isn't a valid skill name (use lowercase letters, numbers, and hyphens), so nothing changed.`);
+    }
+    return slug;
+}
 /**
  * Apply the structured change by committing to the default branch.
  * Returns a confirmation message to post back. Throws {@link DispatchError} for
@@ -41747,10 +41760,11 @@ async function dispatch(octokit, ref, branch, change, commitMsg) {
             if (!change.skill_slug) {
                 throw new DispatchError("I couldn't tell which skill to toggle, so nothing changed.");
             }
-            const path = `${SKILLS_DIR}/${change.skill_slug}.md`;
+            const slug = safeSlug(change.skill_slug);
+            const path = `${SKILLS_DIR}/${slug}.md`;
             const file = await readFile(octokit, ref, path, branch);
             if (file.sha === undefined) {
-                throw new DispatchError(`I couldn't find a skill called \`${change.skill_slug}\`, so nothing changed.`);
+                throw new DispatchError(`I couldn't find a skill called \`${slug}\`, so nothing changed.`);
             }
             const updated = setSkillEnabled(file.content, change.action === 'enable_skill');
             await commitFile(octokit, ref, path, updated, commitMsg, branch, file.sha);
@@ -41760,10 +41774,14 @@ async function dispatch(octokit, ref, branch, change, commitMsg) {
             if (!change.skill_slug || !change.skill_name || !change.rule_markdown) {
                 throw new DispatchError('I need a slug, a name, and the rule text to create a skill, so nothing changed.');
             }
-            const path = `${SKILLS_DIR}/${change.skill_slug}.md`;
+            const slug = safeSlug(change.skill_slug);
+            const path = `${SKILLS_DIR}/${slug}.md`;
             const existing = await readFile(octokit, ref, path, branch);
+            if (existing.sha !== undefined) {
+                throw new DispatchError(`A skill called \`${slug}\` already exists — say "enable ${slug}" to turn it on instead.`);
+            }
             const body = buildSkillFile({
-                slug: change.skill_slug,
+                slug,
                 name: change.skill_name,
                 category: change.skill_category ?? 'other',
                 body: change.rule_markdown,
@@ -41828,7 +41846,11 @@ async function runMention() {
             return;
         }
         const branch = await getDefaultBranch(octokit, repo);
-        const commitMsg = `chore: PatternBuddy applies "${instruction}" from PR #${prNumber} [skip ci]`;
+        // GITHUB_TOKEN commits don't re-trigger workflows ([skip ci] is just belt-and-
+        // suspenders); loop safety on our *reply* comes from the workflow's
+        // user.type != 'Bot' gate. Truncate + quote-strip the user text for a tidy log.
+        const shortInstruction = instruction.replace(/"/g, "'").replace(/\s+/g, ' ').slice(0, 120);
+        const commitMsg = `chore: PatternBuddy applies "${shortInstruction}" from PR #${prNumber} [skip ci]`;
         const note = await dispatch(octokit, repo, branch, change, commitMsg);
         const hint = change.action === 'none' ? '' : '\n\nThe next review will use these settings.';
         await reply(`**PatternBuddy:** ${note}${hint}`);
