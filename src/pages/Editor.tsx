@@ -82,7 +82,7 @@ function Editor() {
       <header className="sr-editor__bar">
         <div className="sr-editor__brandwrap">
           <Link to="/" className="sr-editor__brand">
-            <span aria-hidden="true">◆</span> Soul Review
+            <span aria-hidden="true">◆</span> Pattern Buddy
           </Link>
           <span className="sr-editor__title">Soul editor</span>
         </div>

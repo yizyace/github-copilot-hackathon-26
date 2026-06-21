@@ -19,7 +19,7 @@ The CONSTITUTION.md file contains all engineering rules and conventions that sho
 
 This repo is **dual-purpose**: it is the source for our **website / pitch deck**
 (in `src/`) *and* the home for the **tooling we build**. The project is
-**Soul Review** — a GitHub Action that drops a code reviewer with a *personality
+**Pattern Buddy** — a GitHub Action that drops a code reviewer with a *personality
 and a memory* into a repo (a layered `soul` / `ego` / `rules`, plus a journal of
 lessons fetched on demand). The site also hosts a client-side **Soul editor** at
 `/editor` for authoring the `.soul/` stack.
@@ -30,7 +30,7 @@ lessons fetched on demand). The site also hosts a client-side **Soul editor** at
   - [`docs/project-plan.md`](./docs/project-plan.md) — full project plan.
   - [`docs/eli5.md`](./docs/eli5.md) — simple version (pitch / website copy).
   - [`docs/team.md`](./docs/team.md) — team + GitHub handles.
-  - The full Soul Review design set lives on the `docs/soul-review-design-proposal` branch.
+  - The full Pattern Buddy design set lives on the `docs/soul-review-design-proposal` branch.
 - [`CONSTITUTION.md`](./CONSTITUTION.md) — **engineering rules (read this)**.
 - [`SUBMISSION_CRITERIA.md`](./SUBMISSION_CRITERIA.md) — hackathon judging rubric,
   submission checklist, and the 3:15 deadline. Keep this in mind when prioritizing.

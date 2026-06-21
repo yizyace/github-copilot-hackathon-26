@@ -10,6 +10,7 @@ export function ChromeLayout() {
         <NavLink to="/" end>
           Home
         </NavLink>
+        <NavLink to="/pitch">Pitch</NavLink>
         <NavLink to="/about">About</NavLink>
         <NavLink to="/docs">Docs</NavLink>
       </nav>

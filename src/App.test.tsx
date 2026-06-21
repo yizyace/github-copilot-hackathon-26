@@ -17,6 +17,19 @@ describe('App routing', () => {
     expect(screen.getAllByRole('link', { name: /editor/i }).length).toBeGreaterThan(0)
   })
 
+  it('renders the timed pitch deck at /pitch', () => {
+    render(
+      <MemoryRouter initialEntries={['/pitch']}>
+        <App />
+      </MemoryRouter>,
+    )
+    expect(
+      screen.getByRole('heading', { level: 1, name: /your 4 minutes/i }),
+    ).toBeInTheDocument()
+    // The live presentation timer is present.
+    expect(screen.getByRole('button', { name: /start/i })).toBeInTheDocument()
+  })
+
   it('renders the chrome nav on the secondary pages', () => {
     render(
       <MemoryRouter initialEntries={['/about']}>
